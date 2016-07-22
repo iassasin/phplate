@@ -246,6 +246,7 @@ class TemplateLexer {
 			$esym = $ch;
 			++$cpos;
 			$this->cpos = $cpos;
+			$this->token = '';
 			
 			while ($cpos < $this->ilen){
 				$ch = $this->input{$cpos};
@@ -253,7 +254,29 @@ class TemplateLexer {
 					if ($ch == "\n"){
 						++$this->cline;
 					}
-					//TODO: escape symbols
+					
+					if ($ch == '\\' && $cpos + 1 < $this->ilen){
+						$ch2 = $this->input{$cpos + 1};
+						$rch = '';
+						switch($ch2){
+							case 'n': $rch = "\n"; break;
+							case 'r': $rch = "\r"; break;
+							case 't': $rch = "\t"; break;
+							case '\'': $rch = '\''; break;
+							case '"': $rch = '"'; break;
+							case '\\': $rch = '\\'; break;
+							default:
+								break;
+						}
+						
+						if ($rch){
+							$this->token .= substr($this->input, $this->cpos, $cpos - $this->cpos);
+							$this->token .= $rch;
+							++$cpos;
+							$this->cpos = $cpos + 1;
+						}
+					}
+					
 					++$cpos;
 				} else {
 					break;
@@ -265,7 +288,7 @@ class TemplateLexer {
 			}
 			
 			$this->toktype = self::TOK_STR;
-			$this->token = substr($this->input, $this->cpos, $cpos - $this->cpos);
+			$this->token .= substr($this->input, $this->cpos, $cpos - $this->cpos);
 			$this->cpos = $cpos + 1;
 			
 			return true;
@@ -986,7 +1009,7 @@ class Template {
 			
 				return $p;
 			} catch (Exception $e){
-				return 'Error: '.$tplname.'.html, '.$e->getMessage();
+				return 'Error: '.$tplname.'.html, '.$e->getMessage()."\n".$e->getTraceAsString();
 			}
 		}
 		return 'Error: template "'.$tplname.'" not found';
