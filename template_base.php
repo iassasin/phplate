@@ -1,5 +1,11 @@
 <?php
 
+/**
+* Author: Assasin (assasin@sinair.ru)
+* License: beerware
+* Use for good
+*/
+
 require_once 'bbcode.php';
 
 $PDEBUG = false;
@@ -147,7 +153,40 @@ class TemplateLexer {
 		return $res;
 	}
 	
+	public function nextToken_comment(){
+		$cpos = $this->cpos;
+		
+		while ($cpos < $this->ilen){
+			$c = $this->input{$cpos};
+			
+			if ($c != '*'){
+				if ($c == "\n"){
+					++$this->cline;
+				}
+				++$cpos;
+				continue;
+			}
+			
+			++$cpos;
+			
+			if ($cpos >= $this->ilen){
+				$cpos = $this->ilen;
+				break;
+			}
+			
+			$c = $this->input{$cpos};
+			if ($c == '}'){
+				++$cpos;
+				break;
+			}
+		}
+		
+		$this->cpos = $cpos;
+	}
+	
 	public function nextToken_text(){
+		$this->token = '';
+		
 		$cpos = $this->cpos;
 		if ($cpos >= $this->ilen){
 			$this->toktype = self::TOK_NONE;
@@ -171,7 +210,14 @@ class TemplateLexer {
 			}
 			
 			$c2 = $this->input{$cpos + 1};
-			if ($c == '{' && ($c2 == '{' || $c2 == '?') || $c == '<' && $c2 == '<'){
+			
+			if ($c2 == '*'){
+				$this->token .= substr($this->input, $this->cpos, $cpos - $this->cpos);
+				$this->cpos = $cpos + 1;
+				$this->nextToken_comment();
+				$cpos = $this->cpos;
+				continue;
+			} else if ($c == '{' && ($c2 == '{' || $c2 == '?') || $c == '<' && $c2 == '<'){
 				$this->state = self::STATE_CODE;
 				break;
 			}
@@ -183,7 +229,7 @@ class TemplateLexer {
 			return $this->nextToken_code();
 		}
 		$this->toktype = self::TOK_INLINE;
-		$this->token = substr($this->input, $this->cpos, $cpos - $this->cpos);
+		$this->token .= substr($this->input, $this->cpos, $cpos - $this->cpos);
 		$this->cpos = $cpos;
 		
 		return true;
@@ -222,6 +268,38 @@ class TemplateLexer {
 		$this->cpos = $cpos;
 		
 		return true;
+	}
+	
+	/* State Machine:
+	 * Реализация проверки операторов += -=
+	 * [[
+	 *   '+' => 1,
+	 *   '-' => 1,
+	 * ],[
+	 *   '=' => true,
+	 * ]]
+	 * return: false если машина получила false, иначе строку
+	 */
+	private function checkNextSM($pos, $m){
+		$res = '';
+		$state = 0;
+		while ($pos < $this->ilen){
+			$ch = $this->input{$pos};
+			if (!array_key_exists($ch, $m[$state])){
+				return false;
+			}
+			
+			$res .= $ch;
+			$state = $m[$state][$ch];
+			
+			if ($state === false){
+				return false;
+			} else if ($state === true){
+				return $res;
+			}
+			
+			++$pos;
+		}
 	}
 	
 	public function nextToken_code(){
@@ -297,6 +375,48 @@ class TemplateLexer {
 			$this->toktype = self::TOK_OP;
 			++$cpos;
 			
+//			/*
+			// {{ {? ?} }} << >> />>
+			$smres = $this->checkNextSM($cpos - 1, [
+				0 => [
+					'{' => 1,
+					'?' => 2,
+					'}' => 2,
+					'<' => 3,
+					'>' => 4,
+					'/' => 5,
+				],
+				1 => [
+					'{' => true,
+					'?' => true,
+				],
+				2 => [
+					'}' => true,
+				],
+				3 => [
+					'<' => true,
+				],
+				4 => [
+					'>' => true,
+				],
+				5 => [
+					'>' => 4,
+				],
+			]);
+			
+			if ($smres !== false){
+				$this->token = $smres;
+				$this->toktype = self::TOK_ESC;
+				
+				if ($ch != '{' && $ch != '<'){
+					$this->state = self::STATE_TEXT;
+				}
+				$this->cpos = $cpos + strlen($smres) - 1;
+				
+				return true;
+			}
+//			*/
+			/*
 			if ($cpos < $this->ilen){
 				$ch2 = $this->input{$cpos};
 				if ($ch == '{' && ($ch2 == '{' || $ch2 == '?')
@@ -315,7 +435,7 @@ class TemplateLexer {
 					return true;
 				}
 			}
-			
+			*/
 			if (strpos(self::TERMINAL_OPERATORS, $ch) === false){
 				while ($cpos < $this->ilen && strpos(self::OPERATORS, $this->input{$cpos}) !== false && strpos(self::TERMINAL_OPERATORS, $this->input{$cpos}) === false)
 					++$cpos;
@@ -825,30 +945,36 @@ class TemplateCompiler {
 					}
 				}
 				
-				if (!$this->lexer->isToken(TemplateLexer::TOK_ESC, '>>')){
+				$autoclose = $this->lexer->isToken(TemplateLexer::TOK_ESC, '/>>');
+				
+				if (!$autoclose && !$this->lexer->isToken(TemplateLexer::TOK_ESC, '>>')){
 					$this->lexer->error('Excepted >>');
 				}
 				
-				$oldpgm = $this->pgm;
-				$this->pgm = [];
-				$this->lexer->nextToken();
-				$this->parse();
+				if ($autoclose){
+					$body = [];
+				} else {
+					$oldpgm = $this->pgm;
+					$this->pgm = [];
+					$this->lexer->nextToken();
+					$this->parse();
 				
-				$body = $this->pgm;
-				$this->pgm = $oldpgm;
+					$body = $this->pgm;
+					$this->pgm = $oldpgm;
 				
-				if (!$this->lexer->isToken(TemplateLexer::TOK_OP, '/')){
-					$this->lexer->error('Excepted end of widget');
-				}
+					if (!$this->lexer->isToken(TemplateLexer::TOK_OP, '/')){
+						$this->lexer->error('Excepted end of widget');
+					}
 				
-				$this->lexer->nextToken();
-				if (!$this->lexer->isToken(TemplateLexer::TOK_ID, $wname)){
-					$this->lexer->error('Invalid widget name, excepted "'.$wname.'"');
+					$this->lexer->nextToken();
+					if (!$this->lexer->isToken(TemplateLexer::TOK_ID, $wname)){
+						$this->lexer->error('Invalid widget name, excepted "'.$wname.'"');
+					}
+					
+					$this->lexer->nextToken();
 				}
 				
 				$this->pgm[] = ['widg', $wname, $attrs, $body];
-				
-				$this->lexer->nextToken();
 			}
 		}
 	}
@@ -895,7 +1021,7 @@ class TemplateCompiler {
 								return true;
 							}
 							$this->processWidget();
-							if (!$this->lexer->isToken(TemplateLexer::TOK_ESC, '>>')){
+							if (!($this->lexer->isToken(TemplateLexer::TOK_ESC, '>>') || $this->lexer->isToken(TemplateLexer::TOK_ESC, '/>>'))){
 								$this->lexer->error('Excepted >>');
 							}
 							$this->lexer->nextToken();
@@ -992,6 +1118,14 @@ class Template {
 		return $p->getResult();
 	}
 	
+	public static function build_str($tplstr, array $values){
+		$c = new TemplateCompiler();
+		$c->compile($tplstr);
+		$p = new Template($c->getProgram());
+		$p->run($values);
+		return $p->getResult();
+	}
+	
 	private static function compile($tplname){
 		$tpath = self::$TPL_PATH.$tplname.'.html';
 
@@ -1009,7 +1143,7 @@ class Template {
 			
 				return $p;
 			} catch (Exception $e){
-				return 'Error: '.$tplname.'.html, '.$e->getMessage()."\n".$e->getTraceAsString();
+				return 'Error: '.$tplname.'.html, '.$e->getMessage();
 			}
 		}
 		return 'Error: template "'.$tplname.'" not found';
@@ -1058,13 +1192,13 @@ class Template {
 		
 		switch ($func){
 			case 'safe': $v = htmlspecialchars($v); break;
-			case 'text': $v = str_replace(["\n", '  ', "\t"], ["\n<br>", ' &nbsp;', ' &nbsp; &nbsp;'], htmlspecialchars($v)); break;
+			case 'text': $v = str_replace(["\n", '  ', "\t"], ["\n<br>", '&nbsp;&nbsp;', '&nbsp;&nbsp;&nbsp;&nbsp;'], htmlspecialchars($v)); break;
 		
 			case 'lowercase': $v = mb_strtolower($v, 'utf-8'); break;
 			case 'uppercase': $v = mb_strtoupper($v, 'utf-8'); break;
 		
 			case 'url': $v = htmlspecialchars($v); break;
-			case 'urlparam': $v = urlencode($v); break;
+			case 'urlparam': $v = rawurlencode($v); break;
 		
 			case 'json': $v = json_encode($v); break;
 		
