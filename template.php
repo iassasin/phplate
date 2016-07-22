@@ -5,6 +5,10 @@ class Template {
 	public static $TPL_PATH;
 	public static $DEBUG = false;
 	
+	public static $OPS_CMP = ['=', '==', '===', '!==', '!=', '>', '>=', '<', '<='];
+	
+	private static $TPL_CACHE = [];
+	
 	public static function init(){
 		Template::$TPL_PATH = $_SERVER['DOCUMENT_ROOT'].'/res/tpl/';
 	}
@@ -22,8 +26,18 @@ class Template {
 		}
 		$tplstack[] = $tpath;
 		if (file_exists($tpath)){
-			$p = new Template(file_get_contents($tpath), $values, $tplstack);
-			$p->parse();
+			$p = null;
+			if (array_key_exists($tpath, self::$TPL_CACHE)){
+				$p = self::$TPL_CACHE[$tpath];
+			} else {
+				$p = new Template();
+				$p->compile(file_get_contents($tpath));
+				self::$TPL_CACHE[$tpath] = $p;
+			}
+			$p->run($values, $tplstack);
+			if ($p->getError()){
+				return $p->getError();
+			}
 			return $p->getResult();
 		}
 		return '{? "'.$tplname.'" not found ?}';
@@ -33,22 +47,29 @@ class Template {
 	private $values;
 	private $cpos;
 	private $res;
-	private $printEnabled;
 	private $tplstack;
 	private $lastop;
+	private $pgm;
+	private $error;
 	
-	private function __construct($tpl, array $vals, array $tplstack){
-		$this->tpl = $tpl;
-		$this->values = $vals;
+	private function __construct(){
+		$this->tpl = '';
+		$this->values = null;
 		$this->cpos = 0;
 		$this->res = '';
 		$this->printEnabled = true;
-		$this->tplstack = $tplstack;
+		$this->tplstack = null;
 		$this->lastop = false;
+		$this->pgm = [];
+		$this->error = false;
 	}
 	
 	public function getResult(){
 		return $this->res;
+	}
+	
+	public function getError(){
+		return $this->error;
 	}
 	
 	private function moveToEndOfTag($tag){
@@ -76,7 +97,7 @@ class Template {
 //			if (self::$DEBUG){
 //				echo '{? DEBUG: after ?}'.$str.'{? end ?}'."\n";
 //			}
-			$this->res .= $str;
+			$this->pgm[] = ['str', $str];
 		}
 	}
 	
@@ -86,54 +107,45 @@ class Template {
 		}
 		$this->cpos = $pos;
 	}
-	
-	private function readValue($name){
+
+	/**
+	 * Value arrays:
+	 * [true, $value]
+	 * [false, [$n1, $n2, $n3...], [[$f1, [$arg1, $arg2...]], [f2, ...]]]
+	 */
+	public static function parseValue($name){
 		if ($name{0} == ':'){
-			return substr($name, 1);
+			return [true, substr($name, 1)];
 		} else if ($name{0} == '@'){
+			$v = false;
 			switch (substr($name, 1)){
-				case 'null': return null;
-				case 'true': return true;
-				case 'false': return false;
-				default: return false;
+				case 'null': $v = null; break;
+				case 'true': $v = true; break;
+				case 'false': $v = false; break;
+				default: $v = false; break;
 			}
-		} else {
-			$v = $this->values;
-			$fs = explode('|', $name);
-			foreach (explode('.', $fs[0]) as $part){
-				if (array_key_exists($part, $v)){
-					$v = $v[$part];
-				} else {
-					$v = false;
-					break;
-				}
-			}
-			for ($i = 1; $i < count($fs); ++$i){
-				$fargs = explode(' ', $fs[$i]);
-				$facnt = count($fargs);
-				switch ($fargs[0]){
-					case 'safe': $v = htmlspecialchars($v); break;
-					case 'lowercase': $v = mb_strtolower($v, 'utf-8'); break;
-					case 'uppercase': $v = mb_strtoupper($v, 'utf-8'); break;
-					case 'url': $v = urlencode($v);
-					
-					case 'substr':
-						if ($facnt > 1){
-							if ($facnt > 2){
-								$v = substr($v, $fargs[1], $fargs[2]);
-							} else {
-								$v = substr($v, $fargs[1]);
-							}
-						}
-						break;
-				}
-			}
-			return $v;
+			return [true, $v];
 		}
+		
+		$val = [false];
+		$fs = explode('|', $name);
+		$val[] = explode('.', $fs[0]);
+		$val[] = [];
+		
+		for ($i = 1; $i < count($fs); ++$i){
+			$fargs = explode(' ', $fs[$i]);
+			$val[2][] = [$fargs[0], array_slice($fargs, 1)];
+		}
+		
+		return $val;
 	}
 	
 	private function stripSpaces($str){
 		return preg_replace('/^\s+|\s+$/', '', $str);
+	}
+	
+	private function setError($err){
+		$this->error = $err;
 	}
 	
 	private function processStatement($stmt){
@@ -143,78 +155,72 @@ class Template {
 			$p = $matches[0][1] + strlen($matches[0][0]);
 			switch ($op){
 				case 'if':
+					$pgm = ['if'];
 					if (preg_match('/[\s]*([^\s]+)/', $stmt, $matches, PREG_OFFSET_CAPTURE, $p) === 1){
-						$var1 = $matches[1][0];
+						$pgm[] = $this->parseValue($matches[1][0]);
 						$p = $matches[0][1] + strlen($matches[0][0]);
-						
-						$pe = false;
+
 						if (preg_match('/[\s]*([^\s]+)/', $stmt, $matches, PREG_OFFSET_CAPTURE, $p) === 1){
-							$op = $matches[1][0];
+							$pgm[0] = 'cmp';
+							$pgm[] = $matches[1][0];
 							$p = $matches[0][1] + strlen($matches[0][0]);
 							
-							if (preg_match('/[\s]*([^\s]+)/', $stmt, $matches, PREG_OFFSET_CAPTURE, $p) === 1){
-								$var2 = $matches[1][0];
-								$p = $matches[0][1] + strlen($matches[0][0]);
-								switch ($op){
-									case '=':
-									case '==': $pe = $this->readValue($var1) == $this->readValue($var2); break;
-									case '===': $pe = $this->readValue($var1) === $this->readValue($var2); break;
-									case '>': $pe = $this->readValue($var1) > $this->readValue($var2); break;
-									case '<': $pe = $this->readValue($var1) < $this->readValue($var2); break;
-									case '>=': $pe = $this->readValue($var1) >= $this->readValue($var2); break;
-									case '<=': $pe = $this->readValue($var1) <= $this->readValue($var2); break;
-									case '!=': $pe = $this->readValue($var1) != $this->readValue($var2); break;
-									case '!==': $pe = $this->readValue($var1) !== $this->readValue($var2); break;
-									default: $pe = $this->readValue($var1) ? true : false; break;
-								}
-							} else {
-								$pe = $this->readValue($var1) ? true : false;
+							if (!in_array($pgm[2], self::$OPS_CMP)){
+								$this->setError('Bad compare operator in if');
+								return;
 							}
-						} else {
-							$pe = $this->readValue($var1) ? true : false;
+							
+							if (preg_match('/[\s]*([^\s]+)/', $stmt, $matches, PREG_OFFSET_CAPTURE, $p) === 1){
+								$pgm[] = $this->parseValue($matches[1][0]);
+								$p = $matches[0][1] + strlen($matches[0][0]);
+							} else {
+								$this->setError('Not enough parameters in if');
+								return;
+							}
 						}
 						
-						$lpe = $this->printEnabled;
-						$this->printEnabled &= $pe;
+						$oldpgm = $this->pgm;
+						$this->pgm = [];
 						if ($this->parse() == 'else'){
-							$this->printEnabled = $lpe & !$pe;
+							$pgm[] = $this->pgm;
+							$this->pgm = [];
 							$this->parse();
+							$pgm[] = $this->pgm;
+						} else {
+							$pgm[] = $this->pgm;
+							$pgm[] = [];
 						}
-						$this->printEnabled = $lpe;
+						$this->pgm = $oldpgm;
+						$this->pgm[] = $pgm;
 					}
 					break;
 					
 				case 'for':
 					$arr = preg_split('/\s+/', $stmt, -1, PREG_SPLIT_NO_EMPTY);
 					if (count($arr) == 4 && $arr[2] == 'in'){
-						$k = $arr[1];
-						$a = $this->readValue($arr[3]);
+						$pgm = ['for', $arr[1], $this->parseValue($arr[3])];
+						$oldpgm = $this->pgm;
+						$this->pgm = [];
+						$this->parse();
 						
-						if (!is_array($a) || count($a) < 1){
-							$lpe = $this->printEnabled;
-							$this->printEnabled = false;
-							$this->parse();
-							$this->printEnabled = $lpe;
-						} else {
-							$pos = $this->cpos;
-							$lastop = $this->lastop;
-							foreach ($a as $key => $val){
-								$this->values[$k] = $val;
-								$this->cpos = $pos;
-								$this->lastop = $lastop;
-								$this->parse();
-							}
-						}
+						$pgm[] = $this->pgm;
+						$this->pgm = $oldpgm;
+						$this->pgm[] = $pgm;
+					} else {
+						$this->setError('Not enough parameters or syntax error in for');
+						return;
 					}
 					break;
 					
 				case 'include':
 					$arr = preg_split('/\s+/', $stmt, -1, PREG_SPLIT_NO_EMPTY);
 					$cnt = count($arr);
-					if ($cnt >= 2){
-						$tpl = $arr[1];
-						$arg = $cnt > 2 ? $this->readValue($arr[2]) : $this->values;
-						$this->append(self::build($tpl, $arg, $this->tplstack));
+					if ($cnt == 2 || $cnt == 3){
+						$pgm = ['incl', $arr[1], $cnt == 3 ? $this->parseValue($arr[2]) : null];
+						$this->pgm[] = $pgm;
+					} else {
+						$this->setError('Not enough parameters in include');
+						return;
 					}
 					break;
 			}
@@ -222,7 +228,7 @@ class Template {
 	}
 	
 	public function parse(){
-		while (preg_match('/{[{\?]/', $this->tpl, $matches, PREG_OFFSET_CAPTURE, $this->cpos) === 1){
+		while (preg_match('/{[{\?]/', $this->tpl, $matches, PREG_OFFSET_CAPTURE, $this->cpos) === 1 && $this->error === false){
 			$tag = $matches[0][0];
 			$tpos = $matches[0][1];
 			switch ($tag){
@@ -233,7 +239,7 @@ class Template {
 					$this->cpos = $tpos;
 					$this->moveToEndOfTag('}}');
 					$stmt = $this->stripSpaces(substr($this->tpl, $tpos, $this->cpos - $tpos - 2));
-					$this->append($this->readValue($stmt));
+					$this->pgm[] = ['var', $this->parseValue($stmt)];
 					break;
 					
 				case '{?':
@@ -253,6 +259,148 @@ class Template {
 		$this->appendAndMoveTo(strlen($this->tpl), $this->lastop, false);
 		$this->lastop = false;
 		return '';
+	}
+	
+	public function compile($tpl){
+		$this->error = false;
+		$this->tpl = $tpl;
+		$this->cpos = 0;
+		$this->lastop = false;
+		$this->pgm = [];
+		
+		$this->parse();
+		
+		$this->tpl = '';
+		
+		return $this->error !== false;
+	}
+	
+	public function run($values, $tplstack){
+		if ($this->error){
+			return false;
+		}
+		$this->values = $values;
+		$this->res = '';
+		$this->tplstack = $tplstack;
+		
+		$this->execPgm($this->pgm);
+		
+		return true;
+	}
+	
+	/**
+	 * Program arrays:
+	 * ['str', $string]
+	 * ['var', $var]
+	 * ['if', $var, $body_true, $body_false]
+	 * ['cmp', $var1, $op, $var2, $body_true, $body_false]
+	 * ['incl', $tpl, $args]
+	 * ['for', $i, $var, $body]
+	 * 
+	 * Value arrays:
+	 * [true, $value]
+	 * [false, [$n1, $n2, $n3...], [[$f1, [$arg1, $arg2...]], [f2, ...]...]]
+	 */
+	
+	private function readValue($op){
+		if ($op[0]){
+			return $op[1];
+		}
+	
+		$v = $this->values;
+		foreach ($op[1] as $part){
+			if (array_key_exists($part, $v)){
+				$v = $v[$part];
+			} else {
+				$v = false;
+				break;
+			}
+		}
+		
+		foreach ($op[2] as $func){
+			$fargs = $func[1];
+			$facnt = count($fargs);
+			switch ($func[0]){
+				case 'safe': $v = htmlspecialchars($v); break;
+				case 'lowercase': $v = mb_strtolower($v, 'utf-8'); break;
+				case 'uppercase': $v = mb_strtoupper($v, 'utf-8'); break;
+				case 'url': $v = urlencode($v);
+				
+				case 'substr':
+					if ($facnt > 1){
+						if ($facnt > 2){
+							$v = substr($v, $fargs[0], $fargs[1]);
+						} else {
+							$v = substr($v, $fargs[0]);
+						}
+					}
+					break;
+			}
+		}
+		return $v;
+	}
+	
+	private function execPgm($pgm){
+		foreach ($pgm as $ins){
+			switch ($ins[0]){
+				case 'str':
+					$this->res .= $ins[1];
+					break;
+					
+				case 'var':
+					$this->res .= $this->readValue($ins[1]);
+					break;
+					
+				case 'if':
+					if ($this->readValue($ins[1])){
+						$this->execPgm($ins[2]);
+					} else {
+						$this->execPgm($ins[3]);
+					}
+					break;
+					
+				case 'cmp':
+					$var1 = $ins[1];
+					$var2 = $ins[3];
+					$op = $ins[2];
+					$pe = false;
+					switch ($op){
+						case '=':
+						case '==': $pe = $this->readValue($var1) == $this->readValue($var2); break;
+						case '===': $pe = $this->readValue($var1) === $this->readValue($var2); break;
+						case '>': $pe = $this->readValue($var1) > $this->readValue($var2); break;
+						case '<': $pe = $this->readValue($var1) < $this->readValue($var2); break;
+						case '>=': $pe = $this->readValue($var1) >= $this->readValue($var2); break;
+						case '<=': $pe = $this->readValue($var1) <= $this->readValue($var2); break;
+						case '!=': $pe = $this->readValue($var1) != $this->readValue($var2); break;
+						case '!==': $pe = $this->readValue($var1) !== $this->readValue($var2); break;
+						default: $pe = $this->readValue($var1) ? true : false; break;
+					}
+					if ($pe){
+						$this->execPgm($ins[4]);
+					} else {
+						$this->execPgm($ins[5]);
+					}
+					break;
+				
+				case 'incl':
+					$arg = $ins[2] !== null ? $this->readValue($ins[2]) : $this->values;
+					$this->res .= (self::build($ins[1], $arg, $this->tplstack));
+					break;
+				
+				case 'for':
+					$k = $ins[1];
+					$a = $this->readValue($ins[2]);
+					
+					if (is_array($a) && count($a) > 0){
+						foreach ($a as $key => $val){
+							$this->values[$k] = $val;
+							$this->execPgm($ins[3]);
+						}
+					}
+					break;
+			}
+		}
 	}
 }
 
