@@ -19,10 +19,10 @@ class Template {
 	 * $values - ассоциативный массив параметров вида array('arg' => 'val').
 	 * В файле шаблона параметры обрамляются '{{ }}' (например '{{arg}}')
 	 */
-	public static function build($tplname, array $values, $tplstack = []){
+	public static function build($tplname, array $values, $tplstack = [], $blocks = []){
 		$tpath = self::$TPL_PATH.$tplname.'.html';
 		if (in_array($tpath, $tplstack)){
-			return '{? recursion detected'.join($tplstack, ' => ').' ?}';
+			return '{? recursion detected '.join($tplstack, ' => ').' ?}';
 		}
 		$tplstack[] = $tpath;
 		if (file_exists($tpath)){
@@ -34,23 +34,26 @@ class Template {
 				$p->compile(file_get_contents($tpath));
 				self::$TPL_CACHE[$tpath] = $p;
 			}
-			$p->run($values, $tplstack);
+			$p->run($values, $tplstack, $blocks);
 			if ($p->getError()){
 				return $p->getError();
 			}
+			
 			return $p->getResult();
 		}
 		return '{? "'.$tplname.'" not found ?}';
 	}
 	
 	private $tpl;
-	private $values;
 	private $cpos;
-	private $res;
-	private $tplstack;
 	private $lastop;
-	private $pgm;
 	private $error;
+	
+	private $pgm;
+	private $values;
+	private $tplstack;
+	private $blocks;
+	private $res;
 	
 	private function __construct(){
 		$this->tpl = '';
@@ -62,6 +65,7 @@ class Template {
 		$this->lastop = false;
 		$this->pgm = [];
 		$this->error = false;
+		$this->blocks = [];
 	}
 	
 	public function getResult(){
@@ -82,21 +86,15 @@ class Template {
 	
 	private function append($str, $stripl = false, $stripr = false){
 		if ($this->printEnabled){
-//			if (self::$DEBUG){
-//				echo '{? DEBUG: before('.($stripl ? 'true' : 'false').', '.($stripr ? 'true' : 'false').') ?}'.$str.'{? end ?}'."\n";
-//			}
+
 			if ($stripl){
 				$str = preg_replace("/^( |\t)*\n/", "\n", $str, 1);
 			}
-//			if (self::$DEBUG){
-//				echo '{? DEBUG: step ?}'.$str.'{? end ?}'."\n";
-//			}
+
 			if ($stripr){
 				$str = preg_replace("/\n( |\t)*$/", '', $str, 1);
 			}
-//			if (self::$DEBUG){
-//				echo '{? DEBUG: after ?}'.$str.'{? end ?}'."\n";
-//			}
+
 			$this->pgm[] = ['str', $str];
 		}
 	}
@@ -110,13 +108,17 @@ class Template {
 
 	/**
 	 * Value arrays:
-	 * [true, $value]
-	 * [false, [$n1, $n2, $n3...], [[$f1, [$arg1, $arg2...]], [f2, ...]]]
+	 * ['r', $value]
+	 * ['l', [$n1, $n2, $n3...], [[$f1, [$arg1, $arg2...]], [f2, ...]]]
+	 * ['b', $block, $arg]
 	 */
 	public static function parseValue($name){
 		if ($name{0} == ':'){
-			return [true, substr($name, 1)];
+			return ['r', substr($name, 1)];
 		} else if ($name{0} == '@'){
+			if ($name == '@'){
+				return ['l', [], []];
+			}
 			$v = false;
 			switch (substr($name, 1)){
 				case 'null': $v = null; break;
@@ -124,10 +126,13 @@ class Template {
 				case 'false': $v = false; break;
 				default: $v = false; break;
 			}
-			return [true, $v];
+			return ['r', $v];
+		} else if ($name{0} == '#'){
+			$args = explode(' ', substr($name, 1));
+			return ['b', $args[0], count($args) > 1 ? self::parseValue($args[1]) : null];
 		}
 		
-		$val = [false];
+		$val = ['l'];
 		$fs = explode('|', $name);
 		$val[] = explode('.', $fs[0]);
 		$val[] = [];
@@ -148,31 +153,34 @@ class Template {
 		$this->error = $err;
 	}
 	
+	private function parseNextToken($stmt, &$p){
+		if (preg_match('/[\s]*([^\s]+)/', $stmt, $matches, PREG_OFFSET_CAPTURE, $p) === 1){
+			$p = $matches[0][1] + strlen($matches[0][0]);
+			return $matches[1][0];
+		}
+		return false;
+	}
+	
 	private function processStatement($stmt){
 		$p = 0;
-		if (preg_match('/[\s]*([^\s]+)/', $stmt, $matches, PREG_OFFSET_CAPTURE, $p) === 1){
-			$op = $matches[1][0];
-			$p = $matches[0][1] + strlen($matches[0][0]);
+		if (($op = $this->parseNextToken($stmt, $p)) !== false){
 			switch ($op){
 				case 'if':
 					$pgm = ['if'];
-					if (preg_match('/[\s]*([^\s]+)/', $stmt, $matches, PREG_OFFSET_CAPTURE, $p) === 1){
-						$pgm[] = $this->parseValue($matches[1][0]);
-						$p = $matches[0][1] + strlen($matches[0][0]);
+					if (($tok = $this->parseNextToken($stmt, $p)) !== false){
+						$pgm[] = $this->parseValue($tok);
 
-						if (preg_match('/[\s]*([^\s]+)/', $stmt, $matches, PREG_OFFSET_CAPTURE, $p) === 1){
+						if (($tok = $this->parseNextToken($stmt, $p)) !== false){
 							$pgm[0] = 'cmp';
-							$pgm[] = $matches[1][0];
-							$p = $matches[0][1] + strlen($matches[0][0]);
+							$pgm[] = $tok;
 							
 							if (!in_array($pgm[2], self::$OPS_CMP)){
 								$this->setError('Bad compare operator in if');
 								return;
 							}
 							
-							if (preg_match('/[\s]*([^\s]+)/', $stmt, $matches, PREG_OFFSET_CAPTURE, $p) === 1){
-								$pgm[] = $this->parseValue($matches[1][0]);
-								$p = $matches[0][1] + strlen($matches[0][0]);
+							if (($tok = $this->parseNextToken($stmt, $p)) !== false){
+								$pgm[] = $this->parseValue($tok);
 							} else {
 								$this->setError('Not enough parameters in if');
 								return;
@@ -215,11 +223,49 @@ class Template {
 				case 'include':
 					$arr = preg_split('/\s+/', $stmt, -1, PREG_SPLIT_NO_EMPTY);
 					$cnt = count($arr);
-					if ($cnt == 2 || $cnt == 3){
-						$pgm = ['incl', $arr[1], $cnt == 3 ? $this->parseValue($arr[2]) : null];
+					if ($cnt >= 2){
+						$pgm = ['incl', $arr[1]];
+						if ($cnt == 2){
+							$pgm[] = false;
+							$pgm[] = null;
+						}
+						else if ($cnt == 3){
+							$arg = $this->parseValue($arr[2]);
+							if ($arg[0] == 'r' || $arg[0] == 'b'){
+								$pgm[] = true;
+								$pgm[] = [$arg];
+							} else {
+								$pgm[] = false;
+								$pgm[] = $arg;
+							}
+						} else {
+							$pgm[] = true;
+							$args = [];
+							for ($i = 2; $i < $cnt; ++$i){
+								$args[] = $this->parseValue($arr[$i]);
+							}
+							$pgm[] = $args;
+						}
+						
 						$this->pgm[] = $pgm;
 					} else {
 						$this->setError('Not enough parameters in include');
+						return;
+					}
+					break;
+					
+				case 'block':
+					$arr = preg_split('/\s+/', $stmt, -1, PREG_SPLIT_NO_EMPTY);
+					$cnt = count($arr);
+					if ($cnt == 2){
+						$oldpgm = $this->pgm;
+						$this->pgm = [];
+						$this->parse();
+						
+						$this->blocks[$arr[1]] = $this->pgm;
+						$this->pgm = $oldpgm;
+					} else {
+						$this->setError('Not enough parameters in block');
 						return;
 					}
 					break;
@@ -267,6 +313,7 @@ class Template {
 		$this->cpos = 0;
 		$this->lastop = false;
 		$this->pgm = [];
+		$this->blocks = [];
 		
 		$this->parse();
 		
@@ -275,15 +322,29 @@ class Template {
 		return $this->error !== false;
 	}
 	
-	public function run($values, $tplstack){
+	private function mergeBlocks($blocks){
+		foreach ($blocks as $n => $b){
+			$this->blocks[$n] = $b;
+		}
+	}
+	
+	public function run($values, $tplstack, $blocks){
 		if ($this->error){
 			return false;
 		}
+		
+		$myblocks = $this->blocks;
+		
 		$this->values = $values;
 		$this->res = '';
 		$this->tplstack = $tplstack;
+		$this->mergeBlocks($blocks);
 		
 		$this->execPgm($this->pgm);
+		
+		$this->values = [];
+		$this->tplstack = [];
+		$this->blocks = $myblocks;
 		
 		return true;
 	}
@@ -294,27 +355,50 @@ class Template {
 	 * ['var', $var]
 	 * ['if', $var, $body_true, $body_false]
 	 * ['cmp', $var1, $op, $var2, $body_true, $body_false]
-	 * ['incl', $tpl, $args]
+	 * ['incl', $tpl, $isarr, [$arg1, $arg2, ...]]
 	 * ['for', $i, $var, $body]
 	 * 
 	 * Value arrays:
-	 * [true, $value]
-	 * [false, [$n1, $n2, $n3...], [[$f1, [$arg1, $arg2...]], [f2, ...]...]]
+	 * ['r', $value]
+	 * ['l', [$n1, $n2, $n3...], [[$f1, [$arg1, $arg2...]], [f2, ...]]]
+	 * ['b', $block, $arg]
 	 */
 	
 	private function readValue($op){
-		if ($op[0]){
-			return $op[1];
-		}
+		$v = false;
+		switch ($op[0]){
+			case 'r':
+				return $op[1];
 	
-		$v = $this->values;
-		foreach ($op[1] as $part){
-			if (array_key_exists($part, $v)){
-				$v = $v[$part];
-			} else {
-				$v = false;
+			case 'l':
+				$v = $this->values;
+				foreach ($op[1] as $part){
+					if (array_key_exists($part, $v)){
+						$v = $v[$part];
+					} else {
+						$v = false;
+						break;
+					}
+				}
 				break;
-			}
+				
+			case 'b':
+				$v = false;
+				if (array_key_exists($op[1], $this->blocks)){
+					$oldres = $this->res;
+					$this->res = '';
+					if ($op[2] !== null){
+						$oldvals = $this->values;
+						$this->values = $this->readValue($op[2]);
+						$this->execPgm($this->blocks[$op[1]]);
+						$this->values = $oldvals;
+					} else {
+						$this->execPgm($this->blocks[$op[1]]);
+					}
+					$v = $this->res;
+					$this->res = $oldres;
+				}
+				return $v;
 		}
 		
 		foreach ($op[2] as $func){
@@ -322,9 +406,31 @@ class Template {
 			$facnt = count($fargs);
 			switch ($func[0]){
 				case 'safe': $v = htmlspecialchars($v); break;
+				case 'text': $v = str_replace(["\n", '  ', "\t"], ["\n<br>", ' &nbsp;', ' &nbsp; &nbsp;'], htmlspecialchars($v)); break;
+				
 				case 'lowercase': $v = mb_strtolower($v, 'utf-8'); break;
 				case 'uppercase': $v = mb_strtoupper($v, 'utf-8'); break;
-				case 'url': $v = urlencode($v);
+				
+				case 'url': $v = htmlspecialchars($v); break;
+				case 'urlparam': $v = urlencode($v); break;
+				
+				case 'json': $v = json_encode($v); break;
+				
+				case 'not': $v = !$v; break;
+				
+				case 'count': $v = count($v); break;
+				
+				case 'join':
+					if ($facnt >= 1){
+						$v = join($fargs[0], $v);
+					}
+					break;
+				
+				case 'split':
+					if ($facnt >= 1){
+						$v = explode($fargs[0], $v);
+					}
+					break;
 				
 				case 'substr':
 					if ($facnt > 1){
@@ -334,6 +440,15 @@ class Template {
 							$v = substr($v, $fargs[0]);
 						}
 					}
+					break;
+				
+				case 'usercolor':
+					$usr = new User(+$v);
+					$v = $usr->getColoredName();
+					break;
+					
+				case 'bbcode':
+					$v = str_replace("\n", '<br>', htmlspecialchars($v));
 					break;
 			}
 		}
@@ -360,22 +475,24 @@ class Template {
 					break;
 					
 				case 'cmp':
-					$var1 = $ins[1];
-					$var2 = $ins[3];
+					$var1 = $this->readValue($ins[1]);
+					$var2 = $this->readValue($ins[3]);
 					$op = $ins[2];
 					$pe = false;
+
 					switch ($op){
 						case '=':
-						case '==': $pe = $this->readValue($var1) == $this->readValue($var2); break;
-						case '===': $pe = $this->readValue($var1) === $this->readValue($var2); break;
-						case '>': $pe = $this->readValue($var1) > $this->readValue($var2); break;
-						case '<': $pe = $this->readValue($var1) < $this->readValue($var2); break;
-						case '>=': $pe = $this->readValue($var1) >= $this->readValue($var2); break;
-						case '<=': $pe = $this->readValue($var1) <= $this->readValue($var2); break;
-						case '!=': $pe = $this->readValue($var1) != $this->readValue($var2); break;
-						case '!==': $pe = $this->readValue($var1) !== $this->readValue($var2); break;
-						default: $pe = $this->readValue($var1) ? true : false; break;
+						case '==': $pe = $var1 == $var2; break;
+						case '===': $pe = $var1 === $var2; break;
+						case '>': $pe = $var1 > $var2; break;
+						case '<': $pe = $var1 < $var2; break;
+						case '>=': $pe = $var1 >= $var2; break;
+						case '<=': $pe = $var1 <= $var2; break;
+						case '!=': $pe = $var1 != $var2; break;
+						case '!==': $pe = $var1 !== $var2; break;
+						default: $pe = $var1 ? true : false; break;
 					}
+					
 					if ($pe){
 						$this->execPgm($ins[4]);
 					} else {
@@ -384,8 +501,18 @@ class Template {
 					break;
 				
 				case 'incl':
-					$arg = $ins[2] !== null ? $this->readValue($ins[2]) : $this->values;
-					$this->res .= (self::build($ins[1], $arg, $this->tplstack));
+					if ($ins[2]){
+						$arg = [];
+						foreach ($ins[3] as $insarg){
+							$arg[] = $this->readValue($insarg);
+						}
+					}
+					else if ($ins[3] !== null){
+						$arg = $this->readValue($ins[3]);
+					} else {
+						$arg = $this->values;
+					}
+					$this->res .= (self::build($ins[1], $arg, $this->tplstack, $this->blocks));
 					break;
 				
 				case 'for':
