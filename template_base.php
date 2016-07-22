@@ -126,7 +126,7 @@ class TemplateLexer {
 	}
 	
 	public function error($msg){
-		throw new Exception('input, '.$this->cline.': '.$msg);
+		throw new Exception('line '.$this->cline.': '.$msg);
 	}
 	
 	public function isToken($type, $val){
@@ -154,19 +154,64 @@ class TemplateLexer {
 			return false;
 		}
 		
-		while (true){
-			$cpos = strpos($this->input, '{', $cpos);
-			if ($cpos === false || $cpos + 1 >= $this->ilen){
-				$cpos = strlen($this->input);
+		while ($cpos < $this->ilen){
+			$c = $this->input{$cpos};
+			
+			if ($c != '{' && $c != '<'){
+				if ($c == "\n"){
+					++$this->cline;
+				}
+				++$cpos;
+				continue;
+			}
+			
+			if ($cpos + 1 >= $this->ilen){
+				$cpos = $this->ilen;
 				break;
 			}
 			
-			if (strpos('{?', $this->input{$cpos + 1}) !== false){
+			$c2 = $this->input{$cpos + 1};
+			if ($c == '{' && ($c2 == '{' || $c2 == '?') || $c == '<' && $c2 == '<'){
 				$this->state = self::STATE_CODE;
 				break;
 			}
 			
-			$cpos += 2;
+			++$cpos;
+		}
+		
+		if ($this->cpos == $cpos){
+			return $this->nextToken_code();
+		}
+		$this->toktype = self::TOK_INLINE;
+		$this->token = substr($this->input, $this->cpos, $cpos - $this->cpos);
+		$this->cpos = $cpos;
+		
+		return true;
+	}
+	
+	//not used
+	public function nextToken_text_preg(){
+		$cpos = $this->cpos;
+		if ($cpos >= $this->ilen){
+			$this->toktype = self::TOK_NONE;
+			return false;
+		}
+		
+		$m = false;
+		while (preg_match("/<<|{{|{\?|\n/", $this->input, $matches, PREG_OFFSET_CAPTURE, $cpos) === 1){
+			if ($matches[0][0] == "\n"){
+				++$this->cline;
+				$cpos = $matches[0][1] + 1;
+			} else {
+				$cpos = $matches[0][1];
+				$m = true;
+				$this->state = self::STATE_CODE;
+				break;
+			}
+		}
+		
+		if (!$m){
+			$cpos = $this->ilen;
 		}
 		
 		if ($this->cpos == $cpos){
@@ -205,7 +250,10 @@ class TemplateLexer {
 			while ($cpos < $this->ilen){
 				$ch = $this->input{$cpos};
 				if ($ch != $esym){
-					//todo escape symbols
+					if ($ch == "\n"){
+						++$this->cline;
+					}
+					//TODO: escape symbols
 					++$cpos;
 				} else {
 					break;
@@ -213,7 +261,7 @@ class TemplateLexer {
 			}
 			
 			if ($cpos >= $this->ilen || $this->input{$cpos} != $esym){
-				//error
+				$this->error('Excepted '.$esym);
 			}
 			
 			$this->toktype = self::TOK_STR;
@@ -227,13 +275,16 @@ class TemplateLexer {
 			++$cpos;
 			
 			if ($cpos < $this->ilen){
-				if ($ch == '{' && strpos('{?', $this->input{$cpos}) !== false
-					|| strpos('?}', $ch) !== false && $this->input{$cpos} == '}'
+				$ch2 = $this->input{$cpos};
+				if ($ch == '{' && ($ch2 == '{' || $ch2 == '?')
+					|| ($ch == '?' || $ch == '}') && $ch2 == '}'
+					|| $ch == '<' && $ch2 == '<'
+					|| $ch == '>' && $ch2 == '>'
 				){
 					$this->token = $ch.$this->input{$cpos};
 					$this->toktype = self::TOK_ESC;
 					
-					if ($ch != '{'){
+					if ($ch != '{' && $ch != '<'){
 						$this->state = self::STATE_TEXT;
 					}
 					$this->cpos = $cpos + 1;
@@ -501,90 +552,19 @@ class TemplateLexer {
 
 TemplateLexer::_init();
 
-class Template {
-	
-	public static $TPL_PATH = './';
-	public static $DEBUG = false;
-	
-	private static $TPL_CACHE = [];
-	private static $USER_FUNCS = [];
-	
-	public static function init($tplpath){
-		self::$TPL_PATH = $tplpath;
-	}
-	
-	public static function addUserFunctionHandler($f){
-		if (is_callable($f)){
-			self::$USER_FUNCS[] = $f;
-		}
-	}
-	
-	/**
-	 * Вставляет в шаблон $tplname переменные из массива $values
-	 * $tplname - имя шаблона
-	 * $values - ассоциативный массив параметров вида array('arg' => 'val').
-	 * В файле шаблона параметры обрамляются '{{ }}' (например '{{arg}}')
-	 */
-	public static function build($tplname, array $values, $tplstack = [], $blocks = []){
-		$tpath = self::$TPL_PATH.$tplname.'.html';
-		
-		if (in_array($tpath, $tplstack)){
-			return 'Error: recursion detected '.join($tplstack, ' => ');
-		}
-		
-		$tplstack[] = $tpath;
-		if (file_exists($tpath)){
-			try {
-				$p = null;
-				if (array_key_exists($tpath, self::$TPL_CACHE)){
-					$p = self::$TPL_CACHE[$tpath];
-				} else {
-					$p = new Template();
-					$p->compile(file_get_contents($tpath));
-					self::$TPL_CACHE[$tpath] = $p;
-				}
-			
-				$p->run($values, $tplstack, $blocks);
-				if ($p->getError()){
-					return $p->getError();
-				}
-			
-				return $p->getResult();
-			} catch (Exception $e){
-				return 'Error: '.$e->getMessage()."\n".$e->getTraceAsString();
-			}
-		}
-		return 'Error: template "'.$tplname.'" not found';
-	}
-
+class TemplateCompiler {
 	private $lastop;
-	private $error;
-	
 	private $pgm;
-	private $values;
-	private $tplstack;
-	private $blocks;
-	private $res;
-	
 	private $lexer;
 	
-	private function __construct(){
-		$this->values = null;
-		$this->res = '';
-		$this->tplstack = null;
+	public function __construct(){
 		$this->lastop = false;
 		$this->pgm = [];
-		$this->error = false;
-		$this->blocks = [];
 		$this->lexer = new TemplateLexer();
 	}
 	
 	public function getResult(){
 		return $this->res;
-	}
-	
-	public function getError(){
-		return $this->error;
 	}
 	
 	private function append($str, $stripl = false, $stripr = false){
@@ -595,8 +575,9 @@ class Template {
 		if ($stripr){
 			$str = preg_replace("/\n( |\t)*$/", '', $str, 1);
 		}
-
-		$this->pgm[] = ['str', $str];
+		
+		if ($str != '')
+			$this->pgm[] = ['str', $str];
 	}
 	
 	private function processStatementIf(){
@@ -612,6 +593,7 @@ class Template {
 				$this->lexer->error('Excepted ?}');
 			}
 			
+			$this->lastop = true;
 			$this->lexer->nextToken();
 			$this->parse();
 			
@@ -623,6 +605,7 @@ class Template {
 					$this->lexer->error('Excepted ?}');
 				}
 				
+				$this->lastop = true;
 				if ($this->lexer->isToken(TemplateLexer::TOK_ID, 'if')){
 					$this->processStatementIf();
 				
@@ -688,6 +671,7 @@ class Template {
 								$this->lexer->error('Excepted ?}');
 							}
 							
+							$this->lastop = true;
 							$this->lexer->nextToken();
 							$this->parse();
 							
@@ -744,6 +728,7 @@ class Template {
 								$this->lexer->error('Excepted ?}');
 							}
 							
+							$this->lastop = true;
 							$oldpgm = $this->pgm;
 							$this->pgm = [];
 							$this->lexer->nextToken();
@@ -754,15 +739,93 @@ class Template {
 							}
 							$this->lexer->nextToken();
 							
-							$this->blocks[$bname] = $this->pgm;
+							$pgm = ['regb', $bname, $this->pgm];
 							$this->pgm = $oldpgm;
+							$this->pgm[] = $pgm;
 						} else {
 							$this->lexer->error('Excepted block name');
 						}
 						break;
+						
+					case 'widget':
+						if ($this->lexer->nextToken() && $this->lexer->toktype == TemplateLexer::TOK_ID){
+							$wname = $this->lexer->token;							
+							
+							if (!$this->lexer->nextToken() || !$this->lexer->isToken(TemplateLexer::TOK_ESC, '?}')){
+								$this->lexer->error('Excepted ?}');
+							}
+							
+							$this->lastop = true;
+							$oldpgm = $this->pgm;
+							$this->pgm = [];
+							$this->lexer->nextToken();
+							$this->parse();
+							
+							if (!$this->lexer->isToken(TemplateLexer::TOK_ID, 'end')){
+								$this->lexer->error('Excepted "end" in "widget"');
+							}
+							$this->lexer->nextToken();
+							
+							$pgm = ['regw', $wname, $this->pgm];
+							$this->pgm = $oldpgm;
+							$this->pgm[] = $pgm;
+						} else {
+							$this->lexer->error('Excepted widget name');
+						}
+						break;
+						
+					default:
+						$this->lexer->error('Unexpected operator: '.$this->lexer->token);
 				}
 			} else {
 				$this->lexer->error('Unexcepted token: '.$this->lexer->token);
+			}
+		}
+	}
+	
+	private function processWidget(){
+		if ($this->lexer->toktype != TemplateLexer::TOK_NONE){
+			if ($this->lexer->toktype == TemplateLexer::TOK_ID){
+				$wname = $this->lexer->token;
+				$attrs = [];
+				
+				$this->lexer->nextToken();
+				while ($this->lexer->toktype == TemplateLexer::TOK_ID){
+					$aname = $this->lexer->token;
+					
+					$this->lexer->nextToken();
+					if (!$this->lexer->isToken(TemplateLexer::TOK_OP, '=')){
+						$attrs[$aname] = ['r', true];
+					} else {
+						$this->lexer->nextToken();
+						$attrs[$aname] = $this->lexer->parseExpression();
+					}
+				}
+				
+				if (!$this->lexer->isToken(TemplateLexer::TOK_ESC, '>>')){
+					$this->lexer->error('Excepted >>');
+				}
+				
+				$oldpgm = $this->pgm;
+				$this->pgm = [];
+				$this->lexer->nextToken();
+				$this->parse();
+				
+				$body = $this->pgm;
+				$this->pgm = $oldpgm;
+				
+				if (!$this->lexer->isToken(TemplateLexer::TOK_OP, '/')){
+					$this->lexer->error('Excepted end of widget');
+				}
+				
+				$this->lexer->nextToken();
+				if (!$this->lexer->isToken(TemplateLexer::TOK_ID, $wname)){
+					$this->lexer->error('Invalid widget name, excepted "'.$wname.'"');
+				}
+				
+				$this->pgm[] = ['widg', $wname, $attrs, $body];
+				
+				$this->lexer->nextToken();
 			}
 		}
 	}
@@ -772,24 +835,25 @@ class Template {
 			switch ($this->lexer->toktype){
 				case TemplateLexer::TOK_INLINE:
 					$str = $this->lexer->token;
-					$this->append($str, $this->lastop, $this->lexer->nextToken() && $this->lexer->toktype == TemplateLexer::TOK_ID && $this->lexer->token == '{?');
+					$this->lexer->nextToken();
+					$this->append($str, $this->lastop, $this->lexer->isToken(TemplateLexer::TOK_ESC, '{?'));
+					$this->lastop = false;
 					continue;
 					break;
 					
 				case TemplateLexer::TOK_ESC:
 					switch ($this->lexer->token){
 						case '{{':
-							$this->lastop = false;
 							$this->lexer->nextToken();
 							$this->pgm[] = ['var', $this->lexer->parseExpression()];
 							if ($this->lexer->toktype != TemplateLexer::TOK_ESC || $this->lexer->token != '}}'){
 								$this->lexer->error('Excepted }}');
 							}
 							$this->lexer->nextToken();
+							$this->lastop = false;
 							break;
 					
 						case '{?':
-							$this->lastop = true;
 							$this->lexer->nextToken();
 							if ($this->lexer->toktype == TemplateLexer::TOK_ID && in_array($this->lexer->token, ['end', 'else'])){
 								return true;
@@ -799,6 +863,20 @@ class Template {
 								$this->lexer->error('Excepted ?}');
 							}
 							$this->lexer->nextToken();
+							$this->lastop = true;
+							break;
+							
+						case '<<':
+							$this->lexer->nextToken();
+							if ($this->lexer->isToken(TemplateLexer::TOK_OP, '/')){
+								return true;
+							}
+							$this->processWidget();
+							if (!$this->lexer->isToken(TemplateLexer::TOK_ESC, '>>')){
+								$this->lexer->error('Excepted >>');
+							}
+							$this->lexer->nextToken();
+							$this->lastop = false;
 							break;
 							
 						default:
@@ -816,41 +894,135 @@ class Template {
 	}
 	
 	public function compile($tpl){
-		$this->error = false;
 		$this->lastop = false;
 		$this->pgm = [];
-		$this->blocks = [];
 		
 		$this->lexer->setInput($tpl);
 		$this->lexer->nextToken();
 		$this->parse();
 		
-		return $this->error !== false;
+		return true;
 	}
 	
-	private function mergeBlocks($blocks){
-		foreach ($blocks as $n => $b){
-			$this->blocks[$n] = $b;
+	public function getProgram(){
+		return $this->pgm;
+	}
+}
+
+class DelayedProgram {
+	private $tpl;
+	private $pgm;
+	private $values;
+	
+	public function __construct(Template $tpl, $pgm, $values){
+		$this->tpl = $tpl;
+		$this->pgm = $pgm;
+		$this->values = $values;
+	}
+	
+	public function __toString(){
+		$oldvals = $this->tpl->values;
+		$oldres = $this->tpl->res;
+		
+		$this->tpl->values = $this->values;
+		$this->tpl->res = '';
+		
+		$this->tpl->execPgm($this->pgm);
+		$res = $this->tpl->res;
+		
+		$this->tpl->values = $oldvals;
+		$this->tpl->res = $oldres;
+		
+		return $res;
+	}
+}
+
+class Template {
+	
+	public static $TPL_PATH = './';
+	
+	private static $TPL_CACHE = [];
+	private static $USER_FUNCS = [];
+	
+	public static function init($tplpath){
+		self::$TPL_PATH = $tplpath;
+	}
+	
+	public static function addUserFunctionHandler($f){
+		if (is_callable($f)){
+			self::$USER_FUNCS[] = $f;
 		}
 	}
 	
-	public function run($values, $tplstack, $blocks){
-		if ($this->error){
-			return false;
+	/**
+	 * Вставляет в шаблон $tplname переменные из массива $values
+	 * $tplname - имя шаблона
+	 * $values - ассоциативный массив параметров вида array('arg' => 'val').
+	 * В файле шаблона параметры обрамляются '{{ }}' (например '{{arg}}')
+	 */
+	public static function build($tplname, array $values){
+		$p = self::compile($tplname);
+		if (is_string($p)){
+			return $p;
 		}
-		
-		$myblocks = $this->blocks;
-		
+		$p->run($values);
+		return $p->getResult();
+	}
+	
+	private static function compile($tplname){
+		$tpath = self::$TPL_PATH.$tplname.'.html';
+
+		if (file_exists($tpath)){
+			try {
+				$p = null;
+				if (array_key_exists($tpath, self::$TPL_CACHE)){
+					$p = self::$TPL_CACHE[$tpath];
+				} else {
+					$c = new TemplateCompiler();
+					$c->compile(file_get_contents($tpath));
+					$p = new Template($c->getProgram());
+					self::$TPL_CACHE[$tpath] = $p;
+				}
+			
+				return $p;
+			} catch (Exception $e){
+				return 'Error: '.$tplname.'.html, '.$e->getMessage();
+			}
+		}
+		return 'Error: template "'.$tplname.'" not found';
+	}
+
+	public $pgm;
+	public $values;
+//	private $tplstack;
+	private $blocks;
+	private $widgets;
+	public $res;
+	
+	private function __construct($pgm){
+		$this->pgm = $pgm;
+		$this->values = [];
+		$this->res = '';
+//		$this->tplstack = null;
+		$this->blocks = [];
+		$this->widgets = [];
+	}
+	
+	public function getResult(){
+		return $this->res;
+	}
+	
+	public function run($values){
 		$this->values = $values;
 		$this->res = '';
-		$this->tplstack = $tplstack;
-		$this->mergeBlocks($blocks);
+//		$this->tplstack = $tplstack;
 		
 		$this->execPgm($this->pgm);
 		
 		$this->values = [];
-		$this->tplstack = [];
-		$this->blocks = $myblocks;
+//		$this->tplstack = [];
+		$this->blocks = [];
+		$this->widgets = [];
 		
 		return true;
 	}
@@ -921,6 +1093,9 @@ class Template {
 	 * ['if', $var, $body_true, $body_false]
 	 * ['incl', $tpl, $isarr, [$arg1, $arg2, ...]]
 	 * ['for', $i, $var, $body]
+	 * ['regb', $name, $body]
+	 * ['regw', $name, $wbody]
+	 * ['widg', $name, $attrs, $body]
 	 * 
 	 * Value arrays:
 	 * ['r', $value]
@@ -1038,7 +1213,7 @@ class Template {
 		return false;
 	}
 	
-	private function execPgm($pgm){
+	public function execPgm($pgm){
 		foreach ($pgm as $ins){
 			switch ($ins[0]){
 				case 'str':
@@ -1074,7 +1249,17 @@ class Template {
 						$arg = [$arg];
 					}
 					
-					$this->res .= (self::build($ins[1], $arg, $this->tplstack, $this->blocks));
+					$p = self::compile($ins[1]);
+					if (is_string($p)){
+						$this->res .= $p;
+					} else {
+						$oldvals = $this->values;
+						$this->values = $arg;
+						
+						$this->execPgm($p->pgm);
+						
+						$this->values = $oldvals;
+					}
 					break;
 				
 				case 'for':
@@ -1086,6 +1271,39 @@ class Template {
 							$this->values[$k] = $val;
 							$this->execPgm($ins[3]);
 						}
+					}
+					break;
+					
+				case 'regb':
+					if (!array_key_exists($ins[1], $this->blocks)){
+						$this->blocks[$ins[1]] = $ins[2];
+					}
+					break;
+					
+				case 'regw':
+					$this->widgets[$ins[1]] = $ins[2];
+					break;
+					
+				case 'widg':
+					if (array_key_exists($ins[1], $this->widgets)){
+						$attrs = $ins[2];
+						foreach (array_keys($attrs) as $aname){
+							$attrs[$aname] = $this->readValue($attrs[$aname]);
+						} 
+					
+						$oldwidgets = $this->widgets;
+						$oldvals = $this->values;
+					
+						$this->values = [
+							'attrs' => $attrs,
+							'body' => new DelayedProgram($this, $ins[3], $oldvals),
+						];
+						$this->execPgm($this->widgets[$ins[1]]);
+					
+						$this->values = $oldvals;
+						$this->widgets = $oldwidgets;
+					} else {
+						$this->res .= 'Error: widget '.$ins[1].' not found';
 					}
 					break;
 			}
