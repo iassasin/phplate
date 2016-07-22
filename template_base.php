@@ -48,6 +48,7 @@ class TemplateLexer {
 	public static function _init(){
 		self::$PRE_OPS = [
 			8 => ['+', '-', '!'],
+			9 => ['$'],
 		];
 		
 		self::$INF_OPS = [
@@ -113,6 +114,30 @@ class TemplateLexer {
 					
 					DEBUG('- operator_[p_end');
 					return ['[p', $val, $arg];
+				},
+				
+				'(' => function($parser, $val, $lvl){
+					DEBUG('+ operator_(p_call');
+					$args = [];
+					
+					$parser->nextToken();
+					if (!$parser->isToken(self::TOK_OP, ')')){
+						$args[] = $parser->infix(1);
+						while ($parser->isToken(self::TOK_OP, ',')){
+							$args[] = $parser->infix(1);
+							$parser->nextToken();
+						}
+					
+						if (!$parser->isToken(self::TOK_OP, ')')){
+							$parser->error('Excepted ")" in function call');
+							return null;
+						}
+					}
+					
+					$parser->nextToken();
+					
+					DEBUG('- operator_(p_end');
+					return ['(p', $val, $args];
 				},
 			],
 		];
@@ -235,41 +260,6 @@ class TemplateLexer {
 		return true;
 	}
 	
-	//not used
-	public function nextToken_text_preg(){
-		$cpos = $this->cpos;
-		if ($cpos >= $this->ilen){
-			$this->toktype = self::TOK_NONE;
-			return false;
-		}
-		
-		$m = false;
-		while (preg_match("/<<|{{|{\?|\n/", $this->input, $matches, PREG_OFFSET_CAPTURE, $cpos) === 1){
-			if ($matches[0][0] == "\n"){
-				++$this->cline;
-				$cpos = $matches[0][1] + 1;
-			} else {
-				$cpos = $matches[0][1];
-				$m = true;
-				$this->state = self::STATE_CODE;
-				break;
-			}
-		}
-		
-		if (!$m){
-			$cpos = $this->ilen;
-		}
-		
-		if ($this->cpos == $cpos){
-			return $this->nextToken_code();
-		}
-		$this->toktype = self::TOK_INLINE;
-		$this->token = substr($this->input, $this->cpos, $cpos - $this->cpos);
-		$this->cpos = $cpos;
-		
-		return true;
-	}
-	
 	/* State Machine:
 	 * Реализация проверки операторов += -=
 	 * [[
@@ -374,8 +364,7 @@ class TemplateLexer {
 		else if (strpos(self::OPERATORS, $ch) !== false){
 			$this->toktype = self::TOK_OP;
 			++$cpos;
-			
-//			/*
+
 			// {{ {? ?} }} << >> />>
 			$smres = $this->checkNextSM($cpos - 1, [
 				0 => [
@@ -415,27 +404,7 @@ class TemplateLexer {
 				
 				return true;
 			}
-//			*/
-			/*
-			if ($cpos < $this->ilen){
-				$ch2 = $this->input{$cpos};
-				if ($ch == '{' && ($ch2 == '{' || $ch2 == '?')
-					|| ($ch == '?' || $ch == '}') && $ch2 == '}'
-					|| $ch == '<' && $ch2 == '<'
-					|| $ch == '>' && $ch2 == '>'
-				){
-					$this->token = $ch.$this->input{$cpos};
-					$this->toktype = self::TOK_ESC;
-					
-					if ($ch != '{' && $ch != '<'){
-						$this->state = self::STATE_TEXT;
-					}
-					$this->cpos = $cpos + 1;
-					
-					return true;
-				}
-			}
-			*/
+
 			if (strpos(self::TERMINAL_OPERATORS, $ch) === false){
 				while ($cpos < $this->ilen && strpos(self::OPERATORS, $this->input{$cpos}) !== false && strpos(self::TERMINAL_OPERATORS, $this->input{$cpos}) === false)
 					++$cpos;
@@ -598,6 +567,18 @@ class TemplateLexer {
 					$this->nextToken();
 					
 					DEBUG('- prefix_end_)');
+					return $this->postfix($lvl, $val);
+				} else if ($op == '$'){
+					$gvname = null;
+					
+					$this->nextToken();
+					if ($this->toktype == self::TOK_ID){
+						$gvname = $this->token;
+						$this->nextToken();
+					}
+					
+					$val = ['g', $gvname];
+					DEBUG('- prefix_end_$');
 					return $this->postfix($lvl, $val);
 				} else {
 					$oplvl = $this->findOperator(self::$PRE_OPS, $lvl, $op);
@@ -1092,6 +1073,7 @@ class Template {
 	
 	private static $TPL_CACHE = [];
 	private static $USER_FUNCS = [];
+	private static $GLOB_VARS = [];
 	
 	public static function init($tplpath){
 		self::$TPL_PATH = $tplpath;
@@ -1101,6 +1083,10 @@ class Template {
 		if (is_callable($f)){
 			self::$USER_FUNCS[] = $f;
 		}
+	}
+	
+	public static function addGlobalVar($name, $val){
+		self::$GLOB_VARS[$name] = $val;
 	}
 	
 	/**
@@ -1258,10 +1244,12 @@ class Template {
 	 * ['r', $value]
 	 * ['l', $name]
 	 * ['b', $block, $arg]
+	 * ['g', $gvarname]
 	 *
 	 * [$op, $args...]
 	 * ['|p', $val, $fname, [$arg1, $arg2, ...]]
 	 * ['[p', $val, $key]
+	 * ['(p', $func, [$arg1, $arg2, ...]]
 	 */
 	
 	private function readValue($op){
@@ -1273,16 +1261,42 @@ class Template {
 				if ($op[1] == 'this') return $this->values;
 				return array_key_exists($op[1], $this->values) ? $this->values[$op[1]] : false;
 				
+			case 'g':
+				if ($op[1] === null) return self::$GLOB_VARS;
+				return array_key_exists($op[1], self::$GLOB_VARS) ? self::$GLOB_VARS[$op[1]] : false;
+				
 			case '[p':
 				$v = $this->readValue($op[1]);
-				if (!is_array($v))
-					return false;
-					
 				$k = ''.$this->readValue($op[2]);
-				if (!array_key_exists($k, $v))
+				
+				if ($v === false){
 					return false;
+				}
+				else if (is_array($v)){	
+					return array_key_exists($k, $v) ? $v[$k] : false;
+				}
+				else if (method_exists($v, $k)){
+					return function() use($v, $k) { return call_user_func_array([$v, $k], func_get_args()); };
+				}
+				else if (isset($v->$k)){
+					return $v->$k;
+				}
+				
+				return false;
+				
+			case '(p':
+				$f = $this->readValue($op[1]);
+				
+				if (is_callable($f)){
+					$args = [];
+					foreach ($op[2] as $arg){
+						$args[] = $this->readValue($arg);
+					}
 					
-				return $v[$k];
+					return call_user_func_array($f, $args);
+				}
+				
+				return false;
 				
 			case 'b':
 				$v = false;
@@ -1331,10 +1345,20 @@ class Template {
 				
 				$v2 = $op[2][0] == 'l' ? $op[2][1] : ''.$this->readValue($op[2]);
 				
-				if ($v1 === false || !is_array($v1) || !array_key_exists($v2, $v1)){
+				if ($v1 === false){
 					return false;
 				}
-				return $v1[$v2];
+				else if (is_array($v1)){
+					return array_key_exists($v2, $v1) ? $v1[$v2] : false;
+				}
+				else if (method_exists($v1, $v2)){
+					return function() use($v1, $v2) { return call_user_func_array([$v1, $v2], func_get_args()); };
+				}
+				else if (isset($v1->$v2)){
+					return $v1->$v2;
+				}
+				
+				return false;
 				
 			case '+e': return +$this->readValue($op[1]);
 			case '-e': return -$this->readValue($op[1]);
