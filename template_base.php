@@ -881,10 +881,12 @@ class TemplateCompiler {
 						break;
 						
 					default:
-						$this->lexer->error('Unexpected operator: '.$this->lexer->token);
+						$this->pgm[] = ['var', $this->lexer->parseExpression()];
+						break;
 				}
 			} else {
-				$this->lexer->error('Unexcepted token('.$this->lexer->toktype.'): '.$this->lexer->token);
+				$this->pgm[] = ['var', $this->lexer->parseExpression()];
+				//$this->lexer->error('Unexcepted token('.$this->lexer->toktype.'): '.$this->lexer->token);
 			}
 		}
 	}
