@@ -1114,7 +1114,20 @@ class Template {
 	
 	private static function compile($tplname){
 		$tpath = self::$TPL_PATH.$tplname.'.html';
-
+		$tcpath = self::$TPL_PATH.$tplname.'.ctpl';
+		
+		if (file_exists($tcpath)){
+			if (!file_exists($tpath) || filemtime($tcpath) >= filemtime($tpath)){
+//				$pgm = unserialize(file_get_contents($tcpath), ['allowed_classes' => false]);
+				$pgm = json_decode(file_get_contents($tcpath), true);
+				if ($pgm !== false){
+					$p = new Template($pgm);
+					self::$TPL_CACHE[$tpath] = $p;
+					return $p;
+				}
+			}
+		}
+		
 		if (file_exists($tpath)){
 			try {
 				$p = null;
@@ -1123,7 +1136,11 @@ class Template {
 				} else {
 					$c = new TemplateCompiler();
 					$c->compile(file_get_contents($tpath));
-					$p = new Template($c->getProgram());
+					
+					$pgm = $c->getProgram();
+					file_put_contents($tcpath, json_encode($pgm));
+					
+					$p = new Template($pgm);
 					self::$TPL_CACHE[$tpath] = $p;
 				}
 			
