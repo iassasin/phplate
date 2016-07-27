@@ -13,7 +13,7 @@ $PDEBUG = false;
 function DEBUG($str){
 	global $PDEBUG;
 	if ($PDEBUG)
-		echo $str."\n<br>";
+		echo htmlspecialchars($str)."\n<br>";
 }
 
 class TemplateLexer {
@@ -174,7 +174,7 @@ class TemplateLexer {
 				$res = $this->nextToken_code();
 				break;
 		}
-		DEBUG('Token: ['.$this->toktype.', "'.$this->token.'"]');
+		DEBUG('Token: '.($res ? '['.$this->toktype.', "'.$this->token.'"]' : 'end'));
 		return $res;
 	}
 	
@@ -364,7 +364,7 @@ class TemplateLexer {
 		else if (strpos(self::OPERATORS, $ch) !== false){
 			$this->toktype = self::TOK_OP;
 			++$cpos;
-
+			
 			// {{ {? ?} }} << >> />>
 			$smres = $this->checkNextSM($cpos - 1, [
 				0 => [
@@ -374,6 +374,7 @@ class TemplateLexer {
 					'<' => 3,
 					'>' => 4,
 					'/' => 5,
+					';' => true,
 				],
 				1 => [
 					'{' => true,
@@ -397,7 +398,7 @@ class TemplateLexer {
 				$this->token = $smres;
 				$this->toktype = self::TOK_ESC;
 				
-				if ($ch != '{' && $ch != '<'){
+				if ($ch != '{' && $ch != '<' && $ch != ';'){
 					$this->state = self::STATE_TEXT;
 				}
 				$this->cpos = $cpos + strlen($smres) - 1;
@@ -680,8 +681,10 @@ class TemplateCompiler {
 	private $lastop;
 	private $pgm;
 	private $lexer;
+	private $endesc;
 	
 	public function __construct(){
+		$this->endesc = '';
 		$this->lastop = false;
 		$this->pgm = [];
 		$this->lexer = new TemplateLexer();
@@ -712,13 +715,7 @@ class TemplateCompiler {
 		
 			$oldpgm = $this->pgm;
 			$this->pgm = [];
-			
-			if (!$this->lexer->isToken(TemplateLexer::TOK_ESC, '?}')){
-				$this->lexer->error('Excepted ?}');
-			}
-			
-			$this->lastop = true;
-			$this->lexer->nextToken();
+
 			$this->parse();
 			
 			if ($this->lexer->isToken(TemplateLexer::TOK_ID, 'else')){
@@ -726,7 +723,7 @@ class TemplateCompiler {
 				$this->pgm = [];
 				
 				if (!$this->lexer->nextToken()){
-					$this->lexer->error('Excepted ?}');
+					$this->lexer->error('Excepted "end" for "if"');
 				}
 				
 				$this->lastop = true;
@@ -740,11 +737,6 @@ class TemplateCompiler {
 					
 					return;
 				} else {
-					if (!$this->lexer->isToken(TemplateLexer::TOK_ESC, '?}')){
-						$this->lexer->error('Excepted ?}');
-					}
-					
-					$this->lexer->nextToken();
 					$this->parse();
 					if (!$this->lexer->isToken(TemplateLexer::TOK_ID, 'end')){
 						$this->lexer->error('Excepted "end" for "if"');
@@ -791,12 +783,6 @@ class TemplateCompiler {
 							$oldpgm = $this->pgm;
 							$this->pgm = [];
 							
-							if (!$this->lexer->isToken(TemplateLexer::TOK_ESC, '?}')){
-								$this->lexer->error('Excepted ?}');
-							}
-							
-							$this->lastop = true;
-							$this->lexer->nextToken();
 							$this->parse();
 							
 							if (!$this->lexer->isToken(TemplateLexer::TOK_ID, 'end')){
@@ -848,14 +834,12 @@ class TemplateCompiler {
 						if ($this->lexer->nextToken() && $this->lexer->toktype == TemplateLexer::TOK_ID){
 							$bname = $this->lexer->token;							
 							
-							if (!$this->lexer->nextToken() || !$this->lexer->isToken(TemplateLexer::TOK_ESC, '?}')){
-								$this->lexer->error('Excepted ?}');
+							if (!$this->lexer->nextToken()){
+								$this->lexer->error('Excepted "end" for "block"');
 							}
 							
-							$this->lastop = true;
 							$oldpgm = $this->pgm;
 							$this->pgm = [];
-							$this->lexer->nextToken();
 							$this->parse();
 							
 							if (!$this->lexer->isToken(TemplateLexer::TOK_ID, 'end')){
@@ -875,14 +859,12 @@ class TemplateCompiler {
 						if ($this->lexer->nextToken() && $this->lexer->toktype == TemplateLexer::TOK_ID){
 							$wname = $this->lexer->token;							
 							
-							if (!$this->lexer->nextToken() || !$this->lexer->isToken(TemplateLexer::TOK_ESC, '?}')){
-								$this->lexer->error('Excepted ?}');
+							if (!$this->lexer->nextToken()){
+								$this->lexer->error('Excepted "end" for "widget"');
 							}
 							
-							$this->lastop = true;
 							$oldpgm = $this->pgm;
 							$this->pgm = [];
-							$this->lexer->nextToken();
 							$this->parse();
 							
 							if (!$this->lexer->isToken(TemplateLexer::TOK_ID, 'end')){
@@ -902,7 +884,7 @@ class TemplateCompiler {
 						$this->lexer->error('Unexpected operator: '.$this->lexer->token);
 				}
 			} else {
-				$this->lexer->error('Unexcepted token: '.$this->lexer->token);
+				$this->lexer->error('Unexcepted token('.$this->lexer->toktype.'): '.$this->lexer->token);
 			}
 		}
 	}
@@ -949,7 +931,7 @@ class TemplateCompiler {
 				
 					$this->lexer->nextToken();
 					if (!$this->lexer->isToken(TemplateLexer::TOK_ID, $wname)){
-						$this->lexer->error('Invalid widget name, excepted "'.$wname.'"');
+						$this->lexer->error('Invalid end widget name, excepted "'.$wname.'"');
 					}
 					
 					$this->lexer->nextToken();
@@ -974,26 +956,37 @@ class TemplateCompiler {
 				case TemplateLexer::TOK_ESC:
 					switch ($this->lexer->token){
 						case '{{':
+							$this->endesc = '}}';
 							$this->lexer->nextToken();
 							$this->pgm[] = ['var', $this->lexer->parseExpression()];
-							if ($this->lexer->toktype != TemplateLexer::TOK_ESC || $this->lexer->token != '}}'){
-								$this->lexer->error('Excepted }}');
-							}
-							$this->lexer->nextToken();
-							$this->lastop = false;
 							break;
 					
 						case '{?':
+							$this->endesc = '?}';
 							$this->lexer->nextToken();
-							if ($this->lexer->toktype == TemplateLexer::TOK_ID && in_array($this->lexer->token, ['end', 'else'])){
-								return true;
+							break;
+						
+						case '}}':
+							if ($this->endesc != $this->lexer->token){
+								$this->lexer->error('Excepted '.$this->endesc.', but }} found');
 							}
-							$this->processStatement();
-							if ($this->lexer->toktype != TemplateLexer::TOK_ESC || $this->lexer->token != '?}'){
-								$this->lexer->error('Excepted ?}');
+							$this->endesc = '';
+							
+							$this->lexer->nextToken();
+							break;
+						
+						case '?}':
+							if ($this->endesc != $this->lexer->token){
+								$this->lexer->error('Excepted '.$this->endesc.', but ?} found');
 							}
+							$this->endesc = '';
+							
 							$this->lexer->nextToken();
 							$this->lastop = true;
+							break;
+							
+						case ';':
+							$this->lexer->nextToken();
 							break;
 							
 						case '<<':
@@ -1014,9 +1007,12 @@ class TemplateCompiler {
 							break;
 					}
 					break;
-					
+				
 				default:
-					$this->lexer->error('Unexcepted token('.$this->lexer->toktype.'): '.$this->lexer->token);
+					if ($this->lexer->toktype == TemplateLexer::TOK_ID && in_array($this->lexer->token, ['end', 'else'])){
+						return true;
+					}
+					$this->processStatement();
 					break;
 			}
 		}
@@ -1092,8 +1088,7 @@ class Template {
 	/**
 	 * Вставляет в шаблон $tplname переменные из массива $values
 	 * $tplname - имя шаблона
-	 * $values - ассоциативный массив параметров вида array('arg' => 'val').
-	 * В файле шаблона параметры обрамляются '{{ }}' (например '{{arg}}')
+	 * $values - ассоциативный массив параметров вида ['arg' => 'val'].
 	 */
 	public static function build($tplname, array $values){
 		$p = self::compile($tplname);
