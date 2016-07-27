@@ -960,7 +960,6 @@ class TemplateCompiler {
 						case '{{':
 							$this->endesc = '}}';
 							$this->lexer->nextToken();
-							$this->pgm[] = ['var', $this->lexer->parseExpression()];
 							break;
 					
 						case '{?':
@@ -1011,10 +1010,14 @@ class TemplateCompiler {
 					break;
 				
 				default:
-					if ($this->lexer->toktype == TemplateLexer::TOK_ID && in_array($this->lexer->token, ['end', 'else'])){
-						return true;
+					if ($this->endesc == '}}'){
+						$this->pgm[] = ['var', $this->lexer->parseExpression()];
+					} else {
+						if ($this->lexer->toktype == TemplateLexer::TOK_ID && in_array($this->lexer->token, ['end', 'else'])){
+							return true;
+						}
+						$this->processStatement();
 					}
-					$this->processStatement();
 					break;
 			}
 		}
