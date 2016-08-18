@@ -47,24 +47,25 @@ class TemplateLexer {
 	
 	public static function _init(){
 		self::$PRE_OPS = [
-			8 => ['+', '-', '!'],
-			9 => ['$'],
+			9 => ['+', '-', '!'],
+			10 => ['$'],
 		];
 		
 		self::$INF_OPS = [
-			1 => ['or'],
-			2 => ['xor'],
-			3 => ['and'],
-			4 => ['==', '===', '!=', '!==', '>=', '<=', '<', '>'],
-			5 => ['+', '-'],
-			6 => ['*', '/'],
-			7 => ['^'],
+			1 => ['=', '+=', '-=', '*=', '/='],
+			2 => ['or'],
+			3 => ['xor'],
+			4 => ['and'],
+			5 => ['==', '===', '!=', '!==', '>=', '<=', '<', '>'],
+			6 => ['+', '-'],
+			7 => ['*', '/'],
+			8 => ['^'],
 			
-			9 => ['.'],
+			10 => ['.'],
 		];
 		
 		self::$POST_OPS = [
-			8 => [
+			9 => [
 				'|' => function($parser, $val, $lvl){
 					DEBUG('+ operator_|p_call');
 					if (!$parser->nextToken() || $parser->toktype != self::TOK_ID){
@@ -759,6 +760,15 @@ class TemplateCompiler {
 		DEBUG('- if call');
 	}
 	
+	private function processExpression(){
+		$arg = $this->lexer->parseExpression();
+		if (in_array($arg[0], ['=i', '+=i', '-=i', '*=i', '/=i'])){
+			$this->pgm[] = ['calc', $arg];
+		} else {
+			$this->pgm[] = ['var', $arg];
+		}
+	}
+	
 	private function processStatement(){
 		if ($this->lexer->toktype != TemplateLexer::TOK_NONE){
 			if ($this->lexer->toktype == TemplateLexer::TOK_ID){
@@ -881,11 +891,11 @@ class TemplateCompiler {
 						break;
 						
 					default:
-						$this->pgm[] = ['var', $this->lexer->parseExpression()];
+						$this->processExpression();
 						break;
 				}
 			} else {
-				$this->pgm[] = ['var', $this->lexer->parseExpression()];
+				$this->processExpression();
 				//$this->lexer->error('Unexcepted token('.$this->lexer->toktype.'): '.$this->lexer->token);
 			}
 		}
@@ -1011,7 +1021,7 @@ class TemplateCompiler {
 				
 				default:
 					if ($this->endesc == '}}'){
-						$this->pgm[] = ['var', $this->lexer->parseExpression()];
+						$this->processExpression();
 					} else {
 						if ($this->lexer->toktype == TemplateLexer::TOK_ID && in_array($this->lexer->token, ['end', 'else'])){
 							return true;
@@ -1256,10 +1266,71 @@ class Template {
 		return $v;
 	}
 	
+	private function &readValueReference($op){
+		switch ($op[0]){
+			case 'l':
+				if ($op[1] == 'this')
+					return $this->values;
+				if (!array_key_exists($op[1], $this->values))
+					$this->values[$op[1]] = false;
+				return $this->values[$op[1]];
+				
+			case 'g':
+				if ($op[1] === null)
+					return self::$GLOB_VARS;
+				if (!array_key_exists($op[1], self::$GLOB_VARS))
+					self::$GLOB_VARS[$op[1]] = false;
+				return self::$GLOB_VARS[$op[1]];
+				
+			case '[p':
+				$v =& $this->readValueReference($op[1]);
+				$k = ''.$this->readValue($op[2]);
+				
+				if (is_array($v)){	
+					if (!array_key_exists($k, $v))
+						$v[$k] = false;
+					return $v[$k];
+				}
+				else if (isset($v->$k)){
+					return $v->$k;
+				}
+				
+				break;
+
+			case '.i':
+				if ($op[1][0] == 'l'){
+					if ($op[1][1] == 'this'){
+						$v1 =& $this->values;
+					} else if (!array_key_exists($op[1][1], $this->values)){
+						$v1 =& $this->values[$op[1][1]];
+					} else {
+						throw new Exception();
+					}
+				} else {
+					$v1 =& $this->readValueReference($op[1]);
+				}
+				
+				$v2 = $op[2][0] == 'l' ? $op[2][1] : ''.$this->readValue($op[2]);
+				
+				if (is_array($v1)){
+					if (array_key_exists($v2, $v1))
+						return $v1[$v2];
+				}
+				else if (isset($v1->$v2)){
+					return $v1->$v2;
+				}
+				
+				break;
+		}
+		
+		throw new Exception();
+	}
+	
 	/**
 	 * Program arrays:
 	 * ['str', $string]
 	 * ['var', $var]
+	 * ['calc', $val]
 	 * ['if', $var, $body_true, $body_false]
 	 * ['incl', $tpl, $isarr, [$arg1, $arg2, ...]]
 	 * ['for', $i, $var, $body]
@@ -1413,6 +1484,32 @@ class Template {
 			case 'andi': return $this->readValue($op[1]) && $this->readValue($op[2]);
 			case 'ori': return $this->readValue($op[1]) || $this->readValue($op[2]);
 			case 'xori': return $this->readValue($op[1]) ^ $this->readValue($op[2]);
+			
+			case '=i':
+			case '+=i':
+			case '-=i':
+			case '*=i':
+			case '/=i':
+				try {
+					$v1 =& $this->readValueReference($op[1]);
+				} catch (Exception $e){
+					return false;
+				}
+				$v2 = $this->readValue($op[2]);
+				
+				switch ($op[0]){
+					case '+=i':
+						if (is_string($v1)) $v1 .= $v2;
+						else $v1 += $v2;
+						break;
+					
+					case '=i': $v1 = $this->readValue($op[2]); break;
+					case '-=i': $v1 -= $this->readValue($op[2]); break;
+					case '*=i': $v1 *= $this->readValue($op[2]); break;
+					case '/=i': $v1 /= $this->readValue($op[2]); break;
+				}
+				
+				return $v1;
 				
 			default:
 				return false;
@@ -1430,6 +1527,10 @@ class Template {
 					
 				case 'var':
 					$this->res .= $this->readValue($ins[1]);
+					break;
+					
+				case 'calc':
+					$this->readValue($ins[1]);
 					break;
 					
 				case 'if':
