@@ -1231,6 +1231,16 @@ class Template {
 					}
 				}
 				break;
+				
+			case 'slice':
+				if ($facnt >= 1){
+					if ($facnt >= 2){
+						$v = array_slice($v, $fargs[0], $fargs[1]);
+					} else {
+						$v = array_slice($v, $fargs[0]);
+					}
+				}
+				break;
 			
 			case 'bbcode':
 				$v = BBCode::process($v);
