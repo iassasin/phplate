@@ -708,6 +708,15 @@ class TemplateCompiler {
 			$this->pgm[] = ['str', $str];
 	}
 	
+	private function processExpression(){
+		$arg = $this->lexer->parseExpression();
+		if (in_array($arg[0], ['=i', '+=i', '-=i', '*=i', '/=i'])){
+			$this->pgm[] = ['calc', $arg];
+		} else {
+			$this->pgm[] = ['var', $arg];
+		}
+	}
+	
 	private function processStatementIf(){
 		DEBUG('+ if call');
 		$pgm = ['if'];
@@ -760,15 +769,6 @@ class TemplateCompiler {
 		DEBUG('- if call');
 	}
 	
-	private function processExpression(){
-		$arg = $this->lexer->parseExpression();
-		if (in_array($arg[0], ['=i', '+=i', '-=i', '*=i', '/=i'])){
-			$this->pgm[] = ['calc', $arg];
-		} else {
-			$this->pgm[] = ['var', $arg];
-		}
-	}
-	
 	private function processStatement(){
 		if ($this->lexer->toktype != TemplateLexer::TOK_NONE){
 			if ($this->lexer->toktype == TemplateLexer::TOK_ID){
@@ -778,17 +778,45 @@ class TemplateCompiler {
 						break;
 					
 					case 'for':
-						$pgm = ['for'];
+						$pgm = ['fore'];
 						if ($this->lexer->nextToken() && $this->lexer->toktype == TemplateLexer::TOK_ID){
 							$pgm[] = $this->lexer->token;
 							
-							if (!$this->lexer->nextToken() || $this->lexer->toktype != TemplateLexer::TOK_ID){
-								$this->lexer->error('Excepted "in" in "for"');
-							}
 							if (!$this->lexer->nextToken()){
-								$this->lexer->error('Excepted array in "for"');
+								$this->lexer->error('Excepted "in" or "=" in "for"');
 							}
-							$pgm[] = $this->lexer->parseExpression();
+							
+							if ($this->lexer->isToken(TemplateLexer::TOK_ID, 'in')){
+								if (!$this->lexer->nextToken()){
+									$this->lexer->error('Excepted array in "for"');
+								}
+								$pgm[] = $this->lexer->parseExpression();
+							} else if ($this->lexer->isToken(TemplateLexer::TOK_OP, '=')){
+								$pgm[0] = 'for';
+								
+								if (!$this->lexer->nextToken()){
+									$this->lexer->error('Excepted initializer in "for"');
+								}
+								$pgm[] = $this->lexer->parseExpression();
+								
+								if (!$this->lexer->isToken(TemplateLexer::TOK_ID, 'while')){
+									$this->lexer->error('Excepted "while" in "for"');
+								}
+								if (!$this->lexer->nextToken()){
+									$this->lexer->error('Excepted condition in "for"');
+								}
+								$pgm[] = $this->lexer->parseExpression();
+								
+								if (!$this->lexer->isToken(TemplateLexer::TOK_ID, 'next')){
+									$this->lexer->error('Excepted "next" in "for"');
+								}
+								if (!$this->lexer->nextToken()){
+									$this->lexer->error('Excepted post-iteration action in "for"');
+								}
+								$pgm[] = $this->lexer->parseExpression();
+							} else {
+								$this->lexer->error('Excepted "in" or "=" in "for"');
+							}
 							
 							$oldpgm = $this->pgm;
 							$this->pgm = [];
@@ -1333,7 +1361,8 @@ class Template {
 	 * ['calc', $val]
 	 * ['if', $var, $body_true, $body_false]
 	 * ['incl', $tpl, $isarr, [$arg1, $arg2, ...]]
-	 * ['for', $i, $var, $body]
+	 * ['fore', $i, $var, $body]
+	 * ['for', $i, $init, $cond, $post, $body]
 	 * ['regb', $name, $body]
 	 * ['regw', $name, $wbody]
 	 * ['widg', $name, $attrs, $body]
@@ -1571,7 +1600,7 @@ class Template {
 					}
 					break;
 				
-				case 'for':
+				case 'fore':
 					$k = $ins[1];
 					$a = $this->readValue($ins[2]);
 					
@@ -1580,6 +1609,14 @@ class Template {
 							$this->values[$k] = $val;
 							$this->execPgm($ins[3]);
 						}
+					}
+					break;
+				
+				case 'for':
+					$this->values[$ins[1]] = $this->readValue($ins[2]);
+					while ($this->readValue($ins[3])){
+						$this->execPgm($ins[5]);
+						$this->readValue($ins[4]);
 					}
 					break;
 					
