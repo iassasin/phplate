@@ -988,7 +988,7 @@ class TemplateCompiler {
 				case TemplateLexer::TOK_INLINE:
 					$str = $this->lexer->token;
 					$this->lexer->nextToken();
-					$this->append($str, $this->lastop, false);
+					$this->append($str, $this->lastop, $this->lexer->isToken(TemplateLexer::TOK_ESC, '{?'));
 					$this->lastop = false;
 					continue;
 					break;
