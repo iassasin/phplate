@@ -836,8 +836,9 @@ class TemplateCompiler {
 						}
 						break;
 					
+					case 'include_once':
 					case 'include':
-						$pgm = ['incl'];
+						$pgm = [$this->lexer->token == 'include' ? 'incl' : 'inclo'];
 						
 						if (!$this->lexer->nextToken() || !($this->lexer->toktype == TemplateLexer::TOK_ID || $this->lexer->toktype == TemplateLexer::TOK_STR)){
 							$this->lexer->error('Excepted including template name');
@@ -1150,9 +1151,15 @@ class Template {
 		return $p->getResult();
 	}
 	
-	private static function compile($tplname){
+	private static function compile($tplname, $includes = null){
 		$tpath = self::$TPL_PATH.$tplname.'.html';
 		$tcpath = self::$TPL_PATH.$tplname.'.ctpl';
+		
+		if ($includes === null){
+			$includes = [$tpath];
+		} else {
+			$includes[] = $tpath;
+		}
 		
 		if (file_exists($tcpath)){
 			if (!file_exists($tpath) || filemtime($tcpath) >= filemtime($tpath)){
@@ -1192,7 +1199,7 @@ class Template {
 
 	public $pgm;
 	public $values;
-//	private $tplstack;
+	private $includes;
 	private $blocks;
 	private $widgets;
 	public $res;
@@ -1201,7 +1208,7 @@ class Template {
 		$this->pgm = $pgm;
 		$this->values = [];
 		$this->res = '';
-//		$this->tplstack = null;
+		$this->includes = [];
 		$this->blocks = [];
 		$this->widgets = [];
 	}
@@ -1213,12 +1220,10 @@ class Template {
 	public function run($values){
 		$this->values = $values;
 		$this->res = '';
-//		$this->tplstack = $tplstack;
 		
 		$this->execPgm($this->pgm);
 		
 		$this->values = [];
-//		$this->tplstack = [];
 		$this->blocks = [];
 		$this->widgets = [];
 		
@@ -1361,6 +1366,7 @@ class Template {
 	 * ['calc', $val]
 	 * ['if', $var, $body_true, $body_false]
 	 * ['incl', $tpl, $isarr, [$arg1, $arg2, ...]]
+	 * ['inclo', $tpl, $isarr, [$arg1, $arg2, ...]]
 	 * ['fore', $i, $var, $body]
 	 * ['for', $i, $init, $cond, $post, $body]
 	 * ['regb', $name, $body]
@@ -1571,6 +1577,13 @@ class Template {
 					break;
 				
 				case 'incl':
+				case 'inclo':
+					if ($ins[0] == 'inclo'){
+						if (in_array($ins[1], $this->includes)){
+							break;
+						}
+					}
+					
 					if ($ins[2]){
 						$arg = [];
 						foreach ($ins[3] as $insarg){
@@ -1593,6 +1606,7 @@ class Template {
 					} else {
 						$oldvals = $this->values;
 						$this->values = $arg;
+						$this->includes[] = $ins[1];
 						
 						$this->execPgm($p->pgm);
 						
