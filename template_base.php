@@ -1151,15 +1151,9 @@ class Template {
 		return $p->getResult();
 	}
 	
-	private static function compile($tplname, $includes = null){
+	private static function compile($tplname){
 		$tpath = self::$TPL_PATH.$tplname.'.html';
 		$tcpath = self::$TPL_PATH.$tplname.'.ctpl';
-		
-		if ($includes === null){
-			$includes = [$tpath];
-		} else {
-			$includes[] = $tpath;
-		}
 		
 		if (file_exists($tcpath)){
 			if (!file_exists($tpath) || filemtime($tcpath) >= filemtime($tpath)){
