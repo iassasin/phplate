@@ -6,8 +6,6 @@
 * Use for good
 */
 
-require_once 'bbcode.php';
-
 $PDEBUG = false;
 
 function DEBUG($str){
@@ -1277,10 +1275,6 @@ class Template {
 						$v = array_slice($v, $fargs[0]);
 					}
 				}
-				break;
-			
-			case 'bbcode':
-				$v = BBCode::process($v);
 				break;
 			
 			default:
