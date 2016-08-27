@@ -695,11 +695,11 @@ class TemplateCompiler {
 	
 	private function append($str, $stripl = false, $stripr = false){
 		if ($stripl){
-			$str = preg_replace("/^( |\t)*[\n\r]/", "\n", $str, 1);
+			$str = preg_replace("/^( |\t)*(\r\n|[\r\n])/", '$2', $str, 1);
 		}
 
 		if ($stripr){
-			$str = preg_replace("/[\n\r]( |\t)*$/", '', $str, 1);
+			$str = preg_replace("/(\r\n|[\r\n])( |\t)*$/", '', $str, 1);
 		}
 		
 		if ($str != '')
