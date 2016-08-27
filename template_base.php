@@ -294,7 +294,7 @@ class TemplateLexer {
 	public function nextToken_code(){
 		$cpos = $this->cpos;
 		
-		while ($cpos < $this->ilen && strpos("\n\t ", $this->input{$cpos}) !== false){
+		while ($cpos < $this->ilen && strpos("\r\n\t ", $this->input{$cpos}) !== false){
 			if ($this->input{$cpos} == "\n")
 				++$this->cline;
 			++$cpos;
@@ -695,11 +695,11 @@ class TemplateCompiler {
 	
 	private function append($str, $stripl = false, $stripr = false){
 		if ($stripl){
-			$str = preg_replace("/^( |\t)*\n/", "\n", $str, 1);
+			$str = preg_replace("/^( |\t)*[\n\r]/", "\n", $str, 1);
 		}
 
 		if ($stripr){
-			$str = preg_replace("/\n( |\t)*$/", '', $str, 1);
+			$str = preg_replace("/[\n\r]( |\t)*$/", '', $str, 1);
 		}
 		
 		if ($str != '')
