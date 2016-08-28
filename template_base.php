@@ -1108,13 +1108,15 @@ class DelayedProgram {
 class Template {
 	
 	public static $TPL_PATH = './';
+	public static $CACHE_ENABLED = false;
 	
 	private static $TPL_CACHE = [];
 	private static $USER_FUNCS = [];
 	private static $GLOB_VARS = [];
 	
-	public static function init($tplpath){
+	public static function init($tplpath, $cache = true){
 		self::$TPL_PATH = $tplpath;
+		self::$CACHE_ENABLED = $cache;
 	}
 	
 	public static function addUserFunctionHandler($f){
@@ -1153,7 +1155,7 @@ class Template {
 		$tpath = self::$TPL_PATH.$tplname.'.html';
 		$tcpath = self::$TPL_PATH.$tplname.'.ctpl';
 		
-		if (file_exists($tcpath)){
+		if (self::$CACHE_ENABLED && file_exists($tcpath)){
 			if (!file_exists($tpath) || filemtime($tcpath) >= filemtime($tpath)){
 //				$pgm = unserialize(file_get_contents($tcpath), ['allowed_classes' => false]);
 				$pgm = json_decode(file_get_contents($tcpath), true);
