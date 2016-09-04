@@ -1324,7 +1324,7 @@ class Template {
 				if ($op[1][0] == 'l'){
 					if ($op[1][1] == 'this'){
 						$v1 =& $this->values;
-					} else if (!array_key_exists($op[1][1], $this->values)){
+					} else if (array_key_exists($op[1][1], $this->values)){
 						$v1 =& $this->values[$op[1][1]];
 					} else {
 						throw new Exception();
@@ -1336,8 +1336,9 @@ class Template {
 				$v2 = $op[2][0] == 'l' ? $op[2][1] : ''.$this->readValue($op[2]);
 				
 				if (is_array($v1)){
-					if (array_key_exists($v2, $v1))
-						return $v1[$v2];
+					if (!array_key_exists($v2, $v1))
+						$v1[$v2] = false;
+					return $v1[$v2];
 				}
 				else if (isset($v1->$v2)){
 					return $v1->$v2;
