@@ -45,25 +45,26 @@ class TemplateLexer {
 	
 	public static function _init(){
 		self::$PRE_OPS = [
-			9 => ['+', '-', '!'],
-			10 => ['$'],
+			10 => ['+', '-', '!'],
+			11 => ['$'],
 		];
 		
 		self::$INF_OPS = [
 			1 => ['=', '+=', '-=', '*=', '/='],
-			2 => ['or'],
-			3 => ['xor'],
-			4 => ['and'],
-			5 => ['==', '===', '!=', '!==', '>=', '<=', '<', '>'],
-			6 => ['+', '-'],
-			7 => ['*', '/'],
-			8 => ['^'],
+			2 => ['??'],
+			3 => ['or'],
+			4 => ['xor'],
+			5 => ['and'],
+			6 => ['==', '===', '!=', '!==', '>=', '<=', '<', '>'],
+			7 => ['+', '-'],
+			8 => ['*', '/'],
+			9 => ['^'],
 			
-			10 => ['.'],
+			11 => ['.'],
 		];
 		
 		self::$POST_OPS = [
-			9 => [
+			10 => [
 				'|' => function($parser, $val, $lvl){
 					DEBUG('+ operator_|p_call');
 					if (!$parser->nextToken() || $parser->toktype != self::TOK_ID){
@@ -1510,6 +1511,8 @@ class Template {
 			case 'andi': return $this->readValue($op[1]) && $this->readValue($op[2]);
 			case 'ori': return $this->readValue($op[1]) || $this->readValue($op[2]);
 			case 'xori': return $this->readValue($op[1]) ^ $this->readValue($op[2]);
+			
+			case '??i': return $this->readValue($op[1]) ?: $this->readValue($op[2]);
 			
 			case '=i':
 			case '+=i':
