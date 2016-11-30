@@ -45,25 +45,26 @@ class TemplateLexer {
 	
 	public static function _init(){
 		self::$PRE_OPS = [
-			9 => ['+', '-', '!'],
-			10 => ['$'],
+			10 => ['+', '-', '!'],
+			11 => ['$'],
 		];
 		
 		self::$INF_OPS = [
 			1 => ['=', '+=', '-=', '*=', '/='],
-			2 => ['or'],
-			3 => ['xor'],
-			4 => ['and'],
-			5 => ['==', '===', '!=', '!==', '>=', '<=', '<', '>'],
-			6 => ['+', '-'],
-			7 => ['*', '/'],
-			8 => ['^'],
+			2 => ['??'],
+			3 => ['or'],
+			4 => ['xor'],
+			5 => ['and'],
+			6 => ['==', '===', '!=', '!==', '>=', '<=', '<', '>'],
+			7 => ['+', '-'],
+			8 => ['*', '/'],
+			9 => ['^'],
 			
-			10 => ['.'],
+			11 => ['.'],
 		];
 		
 		self::$POST_OPS = [
-			9 => [
+			10 => [
 				'|' => function($parser, $val, $lvl){
 					DEBUG('+ operator_|p_call');
 					if (!$parser->nextToken() || $parser->toktype != self::TOK_ID){
@@ -294,7 +295,7 @@ class TemplateLexer {
 	public function nextToken_code(){
 		$cpos = $this->cpos;
 		
-		while ($cpos < $this->ilen && strpos("\n\t ", $this->input{$cpos}) !== false){
+		while ($cpos < $this->ilen && strpos("\r\n\t ", $this->input{$cpos}) !== false){
 			if ($this->input{$cpos} == "\n")
 				++$this->cline;
 			++$cpos;
@@ -695,11 +696,11 @@ class TemplateCompiler {
 	
 	private function append($str, $stripl = false, $stripr = false){
 		if ($stripl){
-			$str = preg_replace("/^( |\t)*\n/", "\n", $str, 1);
+			$str = preg_replace("/^( |\t)*(\r\n|[\r\n])/", '$2', $str, 1);
 		}
 
 		if ($stripr){
-			$str = preg_replace("/\n( |\t)*$/", '', $str, 1);
+			$str = preg_replace("/(\r\n|[\r\n])( |\t)*$/", '', $str, 1);
 		}
 		
 		if ($str != '')
@@ -834,8 +835,9 @@ class TemplateCompiler {
 						}
 						break;
 					
+					case 'include_once':
 					case 'include':
-						$pgm = ['incl'];
+						$pgm = [$this->lexer->token == 'include' ? 'incl' : 'inclo'];
 						
 						if (!$this->lexer->nextToken() || !($this->lexer->toktype == TemplateLexer::TOK_ID || $this->lexer->toktype == TemplateLexer::TOK_STR)){
 							$this->lexer->error('Excepted including template name');
@@ -1107,13 +1109,15 @@ class DelayedProgram {
 class Template {
 	
 	public static $TPL_PATH = './';
+	public static $CACHE_ENABLED = false;
 	
 	private static $TPL_CACHE = [];
 	private static $USER_FUNCS = [];
 	private static $GLOB_VARS = [];
 	
-	public static function init($tplpath){
+	public static function init($tplpath, $cache = true){
 		self::$TPL_PATH = $tplpath;
+		self::$CACHE_ENABLED = $cache;
 	}
 	
 	public static function addUserFunctionHandler($f){
@@ -1152,7 +1156,7 @@ class Template {
 		$tpath = self::$TPL_PATH.$tplname.'.html';
 		$tcpath = self::$TPL_PATH.$tplname.'.ctpl';
 		
-		if (file_exists($tcpath)){
+		if (self::$CACHE_ENABLED && file_exists($tcpath)){
 			if (!file_exists($tpath) || filemtime($tcpath) >= filemtime($tpath)){
 //				$pgm = unserialize(file_get_contents($tcpath), ['allowed_classes' => false]);
 				$pgm = json_decode(file_get_contents($tcpath), true);
@@ -1174,7 +1178,9 @@ class Template {
 					$c->compile(file_get_contents($tpath));
 					
 					$pgm = $c->getProgram();
-					file_put_contents($tcpath, json_encode($pgm));
+					if (self::$CACHE_ENABLED){
+						file_put_contents($tcpath, json_encode($pgm));
+					}
 					
 					$p = new Template($pgm);
 					self::$TPL_CACHE[$tpath] = $p;
@@ -1190,7 +1196,7 @@ class Template {
 
 	public $pgm;
 	public $values;
-//	private $tplstack;
+	private $includes;
 	private $blocks;
 	private $widgets;
 	public $res;
@@ -1199,7 +1205,7 @@ class Template {
 		$this->pgm = $pgm;
 		$this->values = [];
 		$this->res = '';
-//		$this->tplstack = null;
+		$this->includes = [];
 		$this->blocks = [];
 		$this->widgets = [];
 	}
@@ -1211,12 +1217,10 @@ class Template {
 	public function run($values){
 		$this->values = $values;
 		$this->res = '';
-//		$this->tplstack = $tplstack;
 		
 		$this->execPgm($this->pgm);
 		
 		$this->values = [];
-//		$this->tplstack = [];
 		$this->blocks = [];
 		$this->widgets = [];
 		
@@ -1323,7 +1327,7 @@ class Template {
 				if ($op[1][0] == 'l'){
 					if ($op[1][1] == 'this'){
 						$v1 =& $this->values;
-					} else if (!array_key_exists($op[1][1], $this->values)){
+					} else if (array_key_exists($op[1][1], $this->values)){
 						$v1 =& $this->values[$op[1][1]];
 					} else {
 						throw new Exception();
@@ -1335,8 +1339,9 @@ class Template {
 				$v2 = $op[2][0] == 'l' ? $op[2][1] : ''.$this->readValue($op[2]);
 				
 				if (is_array($v1)){
-					if (array_key_exists($v2, $v1))
-						return $v1[$v2];
+					if (!array_key_exists($v2, $v1))
+						$v1[$v2] = false;
+					return $v1[$v2];
 				}
 				else if (isset($v1->$v2)){
 					return $v1->$v2;
@@ -1355,6 +1360,7 @@ class Template {
 	 * ['calc', $val]
 	 * ['if', $var, $body_true, $body_false]
 	 * ['incl', $tpl, $isarr, [$arg1, $arg2, ...]]
+	 * ['inclo', $tpl, $isarr, [$arg1, $arg2, ...]]
 	 * ['fore', $i, $var, $body]
 	 * ['for', $i, $init, $cond, $post, $body]
 	 * ['regb', $name, $body]
@@ -1508,6 +1514,8 @@ class Template {
 			case 'ori': return $this->readValue($op[1]) || $this->readValue($op[2]);
 			case 'xori': return $this->readValue($op[1]) ^ $this->readValue($op[2]);
 			
+			case '??i': return $this->readValue($op[1]) ?: $this->readValue($op[2]);
+			
 			case '=i':
 			case '+=i':
 			case '-=i':
@@ -1565,6 +1573,13 @@ class Template {
 					break;
 				
 				case 'incl':
+				case 'inclo':
+					if ($ins[0] == 'inclo'){
+						if (in_array($ins[1], $this->includes)){
+							break;
+						}
+					}
+					
 					if ($ins[2]){
 						$arg = [];
 						foreach ($ins[3] as $insarg){
@@ -1587,6 +1602,7 @@ class Template {
 					} else {
 						$oldvals = $this->values;
 						$this->values = $arg;
+						$this->includes[] = $ins[1];
 						
 						$this->execPgm($p->pgm);
 						
