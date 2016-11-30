@@ -1178,7 +1178,9 @@ class Template {
 					$c->compile(file_get_contents($tpath));
 					
 					$pgm = $c->getProgram();
-					file_put_contents($tcpath, json_encode($pgm));
+					if (self::$CACHE_ENABLED){
+						file_put_contents($tcpath, json_encode($pgm));
+					}
 					
 					$p = new Template($pgm);
 					self::$TPL_CACHE[$tpath] = $p;
