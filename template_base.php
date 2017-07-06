@@ -36,8 +36,8 @@ class TemplateLexer {
 	const STATE_CODE = 1;
 	
 	const OPERATORS = '+-*/|&.,@#$!?:;~%^=<>()[]{}';
-	const TERMINAL_OPERATORS = '.,@#;()[]';
-	const ID_OPERATORS = ['and', 'or', 'xor'];
+	const TERMINAL_OPERATORS = '.,@#;()[]$';
+	const ID_OPERATORS = ['and', 'or', 'xor', 'not'];
 	
 	private static $PRE_OPS;
 	private static $INF_OPS;
@@ -45,7 +45,7 @@ class TemplateLexer {
 	
 	public static function _init(){
 		self::$PRE_OPS = [
-			10 => ['+', '-', '!'],
+			10 => ['+', '-', '!', 'not'],
 			11 => ['$'],
 		];
 		
