@@ -698,3 +698,5 @@ class TemplateLexer
         return null;
     }
 }
+
+TemplateLexer::_init();

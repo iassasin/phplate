@@ -1,0 +1,12 @@
+{
+  "type": "library",
+  "license": "MIT",
+  "autoload": {
+    "psr-4": {
+      "Iassasin\\Phplate\\": "src"
+    },
+    "files": [
+      "src/library.php"
+    ]
+  }
+}

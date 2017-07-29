@@ -5,6 +5,8 @@
  * Use for good
  */
 
+namespace Iassasin\Phplate;
+
 $PDEBUG = false;
 
 function DEBUG($str)
