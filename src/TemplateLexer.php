@@ -9,14 +9,6 @@ namespace Iassasin\Phplate;
 
 class TemplateLexer
 {
-    private $input;
-    private $ilen;
-    public $toktype;
-    public $token;
-    private $cpos;
-    private $cline;
-    private $state;
-
     const TOK_NONE = 0;
     const TOK_ID = 1;
     const TOK_OP = 2;
@@ -25,22 +17,32 @@ class TemplateLexer
     const TOK_INLINE = 5;
     const TOK_ESC = 6;
     const TOK_UNK = 10;
-
     const STATE_TEXT = 0;
     const STATE_CODE = 1;
-
     const OPERATORS = '+-*/|&.,@#$!?:;~%^=<>()[]{}';
-    const TERMINAL_OPERATORS = '.,@#;()[]';
-    const ID_OPERATORS = ['and', 'or', 'xor'];
-
+    const TERMINAL_OPERATORS = '.,@#;()[]$';
+    const ID_OPERATORS = ['and', 'or', 'xor', 'not'];
     private static $PRE_OPS;
     private static $INF_OPS;
     private static $POST_OPS;
+    public $toktype;
+    public $token;
+    private $input;
+    private $ilen;
+    private $cpos;
+    private $cline;
+    private $state;
+
+    public function __construct()
+    {
+        $this->toktype = self::TOK_NONE;
+        $this->token = '';
+    }
 
     public static function _init()
     {
         self::$PRE_OPS = [
-            10 => ['+', '-', '!'],
+            10 => ['+', '-', '!', 'not'],
             11 => ['$'],
         ];
 
@@ -138,12 +140,6 @@ class TemplateLexer
         ];
     }
 
-    public function __construct()
-    {
-        $this->toktype = self::TOK_NONE;
-        $this->token = '';
-    }
-
     public function setInput($str, $st = 0)
     { //STATE_TEXT
         $this->input = $str;
@@ -153,14 +149,200 @@ class TemplateLexer
         $this->state = $st;
     }
 
-    public function error($msg)
-    {
-        throw new \Exception('line ' . $this->cline . ': ' . $msg);
-    }
-
     public function isToken($type, $val)
     {
         return $this->toktype == $type && $this->token == $val;
+    }
+
+    public function getToken()
+    {
+        return [$this->toktype, $this->token];
+    }
+
+    public function getTokenStr()
+    {
+        return '[' . $this->toktype . ', "' . $this->token . '"]';
+    }
+
+    public function parseExpression()
+    {
+        return $this->infix(1);
+    }
+
+    public function infix($lvl)
+    {
+        DEBUG('+ infix_call');
+
+        $a1 = $this->prefix($lvl);
+
+        while ($this->toktype == self::TOK_OP) {
+            $op = $this->token;
+            $oplvl = $this->findOperator(self::$INF_OPS, $lvl, $op);
+            if ($oplvl == null) {
+                DEBUG('- infix_end_1');
+                return $a1;
+            }
+
+            if (!$this->nextToken()) {
+                $this->error('Unexcepted end of file. Operator excepted.');
+                DEBUG('- infix_end_2');
+                return null;
+            }
+
+            if (is_callable($oplvl[1])) {
+                $a1 = $oplvl[1]($this, $a1, $oplvl[0]);
+            } else {
+                $a2 = $this->infix($oplvl[0] + 1);
+                $a1 = [$oplvl[1] . 'i', $a1, $a2];
+            }
+
+            $a1 = $this->postfix($lvl, $a1);
+        }
+
+        DEBUG('- infix_end_3');
+        return $a1;
+    }
+
+    /* State Machine:
+     * Реализация проверки операторов += -=
+     * [[
+     *   '+' => 1,
+     *   '-' => 1,
+     * ],[
+     *   '=' => true,
+     * ]]
+     * return: false если машина получила false, иначе строку
+     */
+
+    public function prefix($lvl)
+    {
+        DEBUG('+ prefix_call');
+        switch ($this->toktype) {
+            case self::TOK_OP:
+                $op = $this->token;
+                if ($op == '#') { //block
+                    if (!$this->nextToken() || $this->toktype != self::TOK_ID) {
+                        $this->error('Block name excepted');
+                        return null;
+                    }
+
+                    $bname = $this->token;
+                    $args = [];
+
+                    if ($this->nextToken()) {
+                        if ($this->toktype == self::TOK_OP && $this->token == '(') {
+                            do {
+                                $this->nextToken();
+                                $args[] = $this->infix(1);
+                            } while ($this->toktype == self::TOK_OP && $this->token == ',');
+
+                            if ($this->toktype != self::TOK_OP || $this->token != ')') {
+                                $this->error('Excepted ")"');
+                                return null;
+                            }
+
+                            $this->nextToken();
+                        }
+                    }
+
+                    $val = ['b', $bname, $args];
+                    DEBUG('- prefix_end_block');
+                    return $this->postfix($lvl, $val);
+                } else if ($op == '(') {
+                    if (!$this->nextToken()) {
+                        $this->error('Argument excepted in "("');
+                        return null;
+                    }
+
+                    $val = $this->infix(1);
+
+                    if ($this->toktype != self::TOK_OP || $this->token != ')') {
+                        $this->error('Excepted ")"');
+                        return null;
+                    }
+
+                    $this->nextToken();
+
+                    DEBUG('- prefix_end_)');
+                    return $this->postfix($lvl, $val);
+                } else if ($op == '$') {
+                    $gvname = null;
+
+                    $this->nextToken();
+                    if ($this->toktype == self::TOK_ID) {
+                        $gvname = $this->token;
+                        $this->nextToken();
+                    }
+
+                    $val = ['g', $gvname];
+                    DEBUG('- prefix_end_$');
+                    return $this->postfix($lvl, $val);
+                } else {
+                    $oplvl = $this->findOperator(self::$PRE_OPS, $lvl, $op);
+                    if ($oplvl == null) {
+                        $this->error('Unexcepted operator "' . $this->token . '"');
+                        break;
+                    }
+
+                    if (!$this->nextToken()) {
+                        $this->error('Unexcepted end of file. Excepted identificator or expression');
+                        break;
+                    }
+
+                    $val = $this->infix($oplvl[0]);
+
+                    if (is_callable($oplvl[1])) {
+                        $val = $oplvl[1]($this, $val, $oplvl[0]);
+                    } else {
+                        $val = [$oplvl[1] . 'e', $val];
+                    }
+
+                    DEBUG('- prefix_end_op');
+                    return $this->postfix($lvl, $val);
+                }
+
+            case self::TOK_ID:
+                switch ($this->token) {
+                    case 'true':
+                        $res = ['r', true];
+                        break;
+                    case 'false':
+                        $res = ['r', false];
+                        break;
+                    case 'null':
+                        $res = ['r', null];
+                        break;
+                    default:
+                        $res = ['l', $this->token];
+                        break;
+                }
+                $this->nextToken();
+                DEBUG('- prefix_end_id');
+                return $this->postfix($lvl, $res);
+
+            case self::TOK_NUM:
+                $res = ['r', +$this->token];
+                $this->nextToken();
+                DEBUG('- prefix_end_num');
+                return $this->postfix($lvl, $res);
+
+            case self::TOK_STR:
+                $res = ['r', $this->token];
+                $this->nextToken();
+                DEBUG('- prefix_end_str');
+                return $this->postfix($lvl, $res);
+
+            case self::TOK_NONE:
+                $this->error('Unexcepted end of file');
+                break;
+
+            default:
+                $this->error('Unknown token (type: ' . $this->toktype . '): "' . $this->token . '"');
+                break;
+        }
+
+        DEBUG('- prefix_end_null');
+        return null;
     }
 
     public function nextToken()
@@ -176,38 +358,6 @@ class TemplateLexer
         }
         DEBUG('Token: ' . ($res ? '[' . $this->toktype . ', "' . $this->token . '"]' : 'end'));
         return $res;
-    }
-
-    public function nextToken_comment()
-    {
-        $cpos = $this->cpos;
-
-        while ($cpos < $this->ilen) {
-            $c = $this->input{$cpos};
-
-            if ($c != '*') {
-                if ($c == "\n") {
-                    ++$this->cline;
-                }
-                ++$cpos;
-                continue;
-            }
-
-            ++$cpos;
-
-            if ($cpos >= $this->ilen) {
-                $cpos = $this->ilen;
-                break;
-            }
-
-            $c = $this->input{$cpos};
-            if ($c == '}') {
-                ++$cpos;
-                break;
-            }
-        }
-
-        $this->cpos = $cpos;
     }
 
     public function nextToken_text()
@@ -262,37 +412,36 @@ class TemplateLexer
         return true;
     }
 
-    /* State Machine:
-     * Реализация проверки операторов += -=
-     * [[
-     *   '+' => 1,
-     *   '-' => 1,
-     * ],[
-     *   '=' => true,
-     * ]]
-     * return: false если машина получила false, иначе строку
-     */
-    private function checkNextSM($pos, $m)
+    public function nextToken_comment()
     {
-        $res = '';
-        $state = 0;
-        while ($pos < $this->ilen) {
-            $ch = $this->input{$pos};
-            if (!array_key_exists($ch, $m[$state])) {
-                return false;
+        $cpos = $this->cpos;
+
+        while ($cpos < $this->ilen) {
+            $c = $this->input{$cpos};
+
+            if ($c != '*') {
+                if ($c == "\n") {
+                    ++$this->cline;
+                }
+                ++$cpos;
+                continue;
             }
 
-            $res .= $ch;
-            $state = $m[$state][$ch];
+            ++$cpos;
 
-            if ($state === false) {
-                return false;
-            } else if ($state === true) {
-                return $res;
+            if ($cpos >= $this->ilen) {
+                $cpos = $this->ilen;
+                break;
             }
 
-            ++$pos;
+            $c = $this->input{$cpos};
+            if ($c == '}') {
+                ++$cpos;
+                break;
+            }
         }
+
+        $this->cpos = $cpos;
     }
 
     public function nextToken_code()
@@ -476,38 +625,32 @@ class TemplateLexer
         }
     }
 
-    public function getToken()
+    public function error($msg)
     {
-        return [$this->toktype, $this->token];
+        throw new \Exception('line ' . $this->cline . ': ' . $msg);
     }
 
-    public function getTokenStr()
+    private function checkNextSM($pos, $m)
     {
-        return '[' . $this->toktype . ', "' . $this->token . '"]';
-    }
-
-    public function parseExpression()
-    {
-        return $this->infix(1);
-    }
-
-    public function findOperator($ops, $lvl, $op)
-    {
-        DEBUG('search operator: ' . $op . ' ' . $lvl);
-        foreach ($ops as $level => $lops) {
-            if ($level >= $lvl) {
-                foreach ($lops as $opk => $opv) {
-                    if (is_callable($opv)) {
-                        if ($opk == $op)
-                            return [$level, $opv];
-                    } else if ($opv == $op) {
-                        return [$level, $opv];
-                    }
-                }
+        $res = '';
+        $state = 0;
+        while ($pos < $this->ilen) {
+            $ch = $this->input{$pos};
+            if (!array_key_exists($ch, $m[$state])) {
+                return false;
             }
-        }
 
-        return null;
+            $res .= $ch;
+            $state = $m[$state][$ch];
+
+            if ($state === false) {
+                return false;
+            } else if ($state === true) {
+                return $res;
+            }
+
+            ++$pos;
+        }
     }
 
     public function postfix($lvl, $val)
@@ -536,168 +679,22 @@ class TemplateLexer
         return $val;
     }
 
-    public function prefix($lvl)
+    public function findOperator($ops, $lvl, $op)
     {
-        DEBUG('+ prefix_call');
-        switch ($this->toktype) {
-            case self::TOK_OP:
-                $op = $this->token;
-                if ($op == '#') { //block
-                    if (!$this->nextToken() || $this->toktype != self::TOK_ID) {
-                        $this->error('Block name excepted');
-                        return null;
+        DEBUG('search operator: ' . $op . ' ' . $lvl);
+        foreach ($ops as $level => $lops) {
+            if ($level >= $lvl) {
+                foreach ($lops as $opk => $opv) {
+                    if (is_callable($opv)) {
+                        if ($opk == $op)
+                            return [$level, $opv];
+                    } else if ($opv == $op) {
+                        return [$level, $opv];
                     }
-
-                    $bname = $this->token;
-                    $args = [];
-
-                    if ($this->nextToken()) {
-                        if ($this->toktype == self::TOK_OP && $this->token == '(') {
-                            do {
-                                $this->nextToken();
-                                $args[] = $this->infix(1);
-                            } while ($this->toktype == self::TOK_OP && $this->token == ',');
-
-                            if ($this->toktype != self::TOK_OP || $this->token != ')') {
-                                $this->error('Excepted ")"');
-                                return null;
-                            }
-
-                            $this->nextToken();
-                        }
-                    }
-
-                    $val = ['b', $bname, $args];
-                    DEBUG('- prefix_end_block');
-                    return $this->postfix($lvl, $val);
-                } else if ($op == '(') {
-                    if (!$this->nextToken()) {
-                        $this->error('Argument excepted in "("');
-                        return null;
-                    }
-
-                    $val = $this->infix(1);
-
-                    if ($this->toktype != self::TOK_OP || $this->token != ')') {
-                        $this->error('Excepted ")"');
-                        return null;
-                    }
-
-                    $this->nextToken();
-
-                    DEBUG('- prefix_end_)');
-                    return $this->postfix($lvl, $val);
-                } else if ($op == '$') {
-                    $gvname = null;
-
-                    $this->nextToken();
-                    if ($this->toktype == self::TOK_ID) {
-                        $gvname = $this->token;
-                        $this->nextToken();
-                    }
-
-                    $val = ['g', $gvname];
-                    DEBUG('- prefix_end_$');
-                    return $this->postfix($lvl, $val);
-                } else {
-                    $oplvl = $this->findOperator(self::$PRE_OPS, $lvl, $op);
-                    if ($oplvl == null) {
-                        $this->error('Unexcepted operator "' . $this->token . '"');
-                        break;
-                    }
-
-                    if (!$this->nextToken()) {
-                        $this->error('Unexcepted end of file. Excepted identificator or expression');
-                        break;
-                    }
-
-                    $val = $this->infix($oplvl[0]);
-
-                    if (is_callable($oplvl[1])) {
-                        $val = $oplvl[1]($this, $val, $oplvl[0]);
-                    } else {
-                        $val = [$oplvl[1] . 'e', $val];
-                    }
-
-                    DEBUG('- prefix_end_op');
-                    return $this->postfix($lvl, $val);
                 }
-
-            case self::TOK_ID:
-                switch ($this->token) {
-                    case 'true':
-                        $res = ['r', true];
-                        break;
-                    case 'false':
-                        $res = ['r', false];
-                        break;
-                    case 'null':
-                        $res = ['r', null];
-                        break;
-                    default:
-                        $res = ['l', $this->token];
-                        break;
-                }
-                $this->nextToken();
-                DEBUG('- prefix_end_id');
-                return $this->postfix($lvl, $res);
-
-            case self::TOK_NUM:
-                $res = ['r', +$this->token];
-                $this->nextToken();
-                DEBUG('- prefix_end_num');
-                return $this->postfix($lvl, $res);
-
-            case self::TOK_STR:
-                $res = ['r', $this->token];
-                $this->nextToken();
-                DEBUG('- prefix_end_str');
-                return $this->postfix($lvl, $res);
-
-            case self::TOK_NONE:
-                $this->error('Unexcepted end of file');
-                break;
-
-            default:
-                $this->error('Unknown token (type: ' . $this->toktype . '): "' . $this->token . '"');
-                break;
+            }
         }
 
-        DEBUG('- prefix_end_null');
         return null;
-    }
-
-    public function infix($lvl)
-    {
-        DEBUG('+ infix_call');
-
-        $a1 = $this->prefix($lvl);
-
-        while ($this->toktype == self::TOK_OP) {
-            $op = $this->token;
-            $oplvl = $this->findOperator(self::$INF_OPS, $lvl, $op);
-            if ($oplvl == null) {
-                DEBUG('- infix_end_1');
-                return $a1;
-            }
-
-            if (!$this->nextToken()) {
-                $this->error('Unexcepted end of file. Operator excepted.');
-                DEBUG('- infix_end_2');
-                return null;
-            }
-
-            if (is_callable($oplvl[1])) {
-                $a1 = $oplvl[1]($this, $a1, $oplvl[0]);
-            } else {
-                $a2 = $this->infix($oplvl[0] + 1);
-                $a1 = [$oplvl[1] . 'i', $a1, $a2];
-            }
-
-            $a1 = $this->postfix($lvl, $a1);
-        }
-
-        DEBUG('- infix_end_3');
-        return $a1;
     }
 }

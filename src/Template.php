@@ -16,6 +16,22 @@ class Template
     private static $TPL_CACHE = [];
     private static $USER_FUNCS = [];
     private static $GLOB_VARS = [];
+    public $pgm;
+    public $values;
+    public $res;
+    private $includes;
+    private $blocks;
+    private $widgets;
+
+    private function __construct($pgm)
+    {
+        $this->pgm = $pgm;
+        $this->values = [];
+        $this->res = '';
+        $this->includes = [];
+        $this->blocks = [];
+        $this->widgets = [];
+    }
 
     public static function init($tplpath, $cache = true)
     {
@@ -46,15 +62,6 @@ class Template
         if (is_string($p)) {
             return $p;
         }
-        $p->run($values);
-        return $p->getResult();
-    }
-
-    public static function build_str($tplstr, array $values)
-    {
-        $c = new TemplateCompiler();
-        $c->compile($tplstr);
-        $p = new Template($c->getProgram());
         $p->run($values);
         return $p->getResult();
     }
@@ -95,33 +102,11 @@ class Template
                 }
 
                 return $p;
-            } catch (Exception $e) {
+            } catch (\Exception $e) {
                 return 'Error: ' . $tplname . '.html, ' . $e->getMessage();
             }
         }
         return 'Error: template "' . $tplname . '" not found';
-    }
-
-    public $pgm;
-    public $values;
-    private $includes;
-    private $blocks;
-    private $widgets;
-    public $res;
-
-    private function __construct($pgm)
-    {
-        $this->pgm = $pgm;
-        $this->values = [];
-        $this->res = '';
-        $this->includes = [];
-        $this->blocks = [];
-        $this->widgets = [];
-    }
-
-    public function getResult()
-    {
-        return $this->res;
     }
 
     public function run($values)
@@ -138,150 +123,121 @@ class Template
         return true;
     }
 
-    private function applyFunction($v, $func, $fargs)
+    public function execPgm($pgm)
     {
-        $facnt = count($fargs);
-        for ($i = 0; $i < $facnt; ++$i) {
-            $fargs[$i] = $this->readValue($fargs[$i]);
-        }
+        foreach ($pgm as $ins) {
+            switch ($ins[0]) {
+                case 'str':
+                    $this->res .= $ins[1];
+                    break;
 
-        switch ($func) {
-            case 'safe':
-                $v = htmlspecialchars($v);
-                break;
-            case 'text':
-                $v = str_replace(["\n", '  ', "\t"], ["\n<br>", '&nbsp;&nbsp;', '&nbsp;&nbsp;&nbsp;&nbsp;'], htmlspecialchars($v));
-                break;
+                case 'var':
+                    $this->res .= $this->readValue($ins[1]);
+                    break;
 
-            case 'lowercase':
-                $v = mb_strtolower($v, 'utf-8');
-                break;
-            case 'uppercase':
-                $v = mb_strtoupper($v, 'utf-8');
-                break;
+                case 'calc':
+                    $this->readValue($ins[1]);
+                    break;
 
-            case 'url':
-                $v = htmlspecialchars($v);
-                break;
-            case 'urlparam':
-                $v = rawurlencode($v);
-                break;
-
-            case 'json':
-                $v = json_encode($v);
-                break;
-
-            case 'count':
-                $v = count($v);
-                break;
-
-            case 'isarray':
-                $v = is_array($v);
-                break;
-            case 'keys':
-                $v = array_keys($v);
-                break;
-
-            case 'join':
-                if ($facnt >= 1) {
-                    $v = join($fargs[0], $v);
-                }
-                break;
-
-            case 'split':
-                if ($facnt >= 1) {
-                    $v = explode($fargs[0], $v);
-                }
-                break;
-
-            case 'substr':
-                if ($facnt >= 1) {
-                    if ($facnt >= 2) {
-                        $v = substr($v, $fargs[0], $fargs[1]);
+                case 'if':
+                    if ($this->readValue($ins[1])) {
+                        $this->execPgm($ins[2]);
                     } else {
-                        $v = substr($v, $fargs[0]);
+                        $this->execPgm($ins[3]);
                     }
-                }
-                break;
+                    break;
 
-            case 'slice':
-                if ($facnt >= 1) {
-                    if ($facnt >= 2) {
-                        $v = array_slice($v, $fargs[0], $fargs[1]);
+                case 'incl':
+                case 'inclo':
+                    if ($ins[0] == 'inclo') {
+                        if (in_array($ins[1], $this->includes)) {
+                            break;
+                        }
+                    }
+
+                    if ($ins[2]) {
+                        $arg = [];
+                        foreach ($ins[3] as $insarg) {
+                            $arg[] = $this->readValue($insarg);
+                        }
+                    } else if ($ins[3] !== null) {
+                        $arg = $this->readValue($ins[3]);
                     } else {
-                        $v = array_slice($v, $fargs[0]);
+                        $arg = $this->values;
                     }
-                }
-                break;
 
-            default:
-                foreach (self::$USER_FUNCS as $f) {
-                    $v = $f($v, $func, $fargs);
-                }
-                break;
-        }
+                    if (!is_array($arg)) {
+                        $arg = [$arg];
+                    }
 
-        return $v;
-    }
-
-    private function &readValueReference($op)
-    {
-        switch ($op[0]) {
-            case 'l':
-                if ($op[1] == 'this')
-                    return $this->values;
-                if (!array_key_exists($op[1], $this->values))
-                    $this->values[$op[1]] = false;
-                return $this->values[$op[1]];
-
-            case 'g':
-                if ($op[1] === null)
-                    return self::$GLOB_VARS;
-                if (!array_key_exists($op[1], self::$GLOB_VARS))
-                    self::$GLOB_VARS[$op[1]] = false;
-                return self::$GLOB_VARS[$op[1]];
-
-            case '[p':
-                $v =& $this->readValueReference($op[1]);
-                $k = '' . $this->readValue($op[2]);
-
-                if (is_array($v)) {
-                    if (!array_key_exists($k, $v))
-                        $v[$k] = false;
-                    return $v[$k];
-                } else if (isset($v->$k)) {
-                    return $v->$k;
-                }
-
-                break;
-
-            case '.i':
-                if ($op[1][0] == 'l') {
-                    if ($op[1][1] == 'this') {
-                        $v1 =& $this->values;
-                    } else if (array_key_exists($op[1][1], $this->values)) {
-                        $v1 =& $this->values[$op[1][1]];
+                    $p = self::compile($ins[1]);
+                    if (is_string($p)) {
+                        $this->res .= $p;
                     } else {
-                        throw new Exception();
+                        $oldvals = $this->values;
+                        $this->values = $arg;
+                        $this->includes[] = $ins[1];
+
+                        $this->execPgm($p->pgm);
+
+                        $this->values = $oldvals;
                     }
-                } else {
-                    $v1 =& $this->readValueReference($op[1]);
-                }
+                    break;
 
-                $v2 = $op[2][0] == 'l' ? $op[2][1] : '' . $this->readValue($op[2]);
+                case 'fore':
+                    $k = $ins[1];
+                    $a = $this->readValue($ins[2]);
 
-                if (is_array($v1)) {
-                    if (!array_key_exists($v2, $v1))
-                        $v1[$v2] = false;
-                    return $v1[$v2];
-                } else if (isset($v1->$v2)) {
-                    return $v1->$v2;
-                }
+                    if (is_array($a) && count($a) > 0) {
+                        foreach ($a as $key => $val) {
+                            $this->values[$k] = $val;
+                            $this->execPgm($ins[3]);
+                        }
+                    }
+                    break;
 
-                break;
+                case 'for':
+                    $this->values[$ins[1]] = $this->readValue($ins[2]);
+                    while ($this->readValue($ins[3])) {
+                        $this->execPgm($ins[5]);
+                        $this->readValue($ins[4]);
+                    }
+                    break;
+
+                case 'regb':
+                    if (!array_key_exists($ins[1], $this->blocks)) {
+                        $this->blocks[$ins[1]] = $ins[2];
+                    }
+                    break;
+
+                case 'regw':
+                    $this->widgets[$ins[1]] = $ins[2];
+                    break;
+
+                case 'widg':
+                    if (array_key_exists($ins[1], $this->widgets)) {
+                        $attrs = $ins[2];
+                        foreach (array_keys($attrs) as $aname) {
+                            $attrs[$aname] = $this->readValue($attrs[$aname]);
+                        }
+
+                        $oldwidgets = $this->widgets;
+                        $oldvals = $this->values;
+
+                        $this->values = [
+                            'attrs' => $attrs,
+                            'body' => new DelayedProgram($this, $ins[3], $oldvals),
+                        ];
+                        $this->execPgm($this->widgets[$ins[1]]);
+
+                        $this->values = $oldvals;
+                        $this->widgets = $oldwidgets;
+                    } else {
+                        $this->res .= 'Error: widget ' . $ins[1] . ' not found';
+                    }
+                    break;
+            }
         }
-
-        throw new Exception();
     }
 
     /**
@@ -471,7 +427,7 @@ class Template
             case '/=i':
                 try {
                     $v1 =& $this->readValueReference($op[1]);
-                } catch (Exception $e) {
+                } catch (\Exception $e) {
                     return false;
                 }
                 $v2 = $this->readValue($op[2]);
@@ -505,120 +461,163 @@ class Template
         return false;
     }
 
-    public function execPgm($pgm)
+    private function applyFunction($v, $func, $fargs)
     {
-        foreach ($pgm as $ins) {
-            switch ($ins[0]) {
-                case 'str':
-                    $this->res .= $ins[1];
-                    break;
-
-                case 'var':
-                    $this->res .= $this->readValue($ins[1]);
-                    break;
-
-                case 'calc':
-                    $this->readValue($ins[1]);
-                    break;
-
-                case 'if':
-                    if ($this->readValue($ins[1])) {
-                        $this->execPgm($ins[2]);
-                    } else {
-                        $this->execPgm($ins[3]);
-                    }
-                    break;
-
-                case 'incl':
-                case 'inclo':
-                    if ($ins[0] == 'inclo') {
-                        if (in_array($ins[1], $this->includes)) {
-                            break;
-                        }
-                    }
-
-                    if ($ins[2]) {
-                        $arg = [];
-                        foreach ($ins[3] as $insarg) {
-                            $arg[] = $this->readValue($insarg);
-                        }
-                    } else if ($ins[3] !== null) {
-                        $arg = $this->readValue($ins[3]);
-                    } else {
-                        $arg = $this->values;
-                    }
-
-                    if (!is_array($arg)) {
-                        $arg = [$arg];
-                    }
-
-                    $p = self::compile($ins[1]);
-                    if (is_string($p)) {
-                        $this->res .= $p;
-                    } else {
-                        $oldvals = $this->values;
-                        $this->values = $arg;
-                        $this->includes[] = $ins[1];
-
-                        $this->execPgm($p->pgm);
-
-                        $this->values = $oldvals;
-                    }
-                    break;
-
-                case 'fore':
-                    $k = $ins[1];
-                    $a = $this->readValue($ins[2]);
-
-                    if (is_array($a) && count($a) > 0) {
-                        foreach ($a as $key => $val) {
-                            $this->values[$k] = $val;
-                            $this->execPgm($ins[3]);
-                        }
-                    }
-                    break;
-
-                case 'for':
-                    $this->values[$ins[1]] = $this->readValue($ins[2]);
-                    while ($this->readValue($ins[3])) {
-                        $this->execPgm($ins[5]);
-                        $this->readValue($ins[4]);
-                    }
-                    break;
-
-                case 'regb':
-                    if (!array_key_exists($ins[1], $this->blocks)) {
-                        $this->blocks[$ins[1]] = $ins[2];
-                    }
-                    break;
-
-                case 'regw':
-                    $this->widgets[$ins[1]] = $ins[2];
-                    break;
-
-                case 'widg':
-                    if (array_key_exists($ins[1], $this->widgets)) {
-                        $attrs = $ins[2];
-                        foreach (array_keys($attrs) as $aname) {
-                            $attrs[$aname] = $this->readValue($attrs[$aname]);
-                        }
-
-                        $oldwidgets = $this->widgets;
-                        $oldvals = $this->values;
-
-                        $this->values = [
-                            'attrs' => $attrs,
-                            'body' => new DelayedProgram($this, $ins[3], $oldvals),
-                        ];
-                        $this->execPgm($this->widgets[$ins[1]]);
-
-                        $this->values = $oldvals;
-                        $this->widgets = $oldwidgets;
-                    } else {
-                        $this->res .= 'Error: widget ' . $ins[1] . ' not found';
-                    }
-                    break;
-            }
+        $facnt = count($fargs);
+        for ($i = 0; $i < $facnt; ++$i) {
+            $fargs[$i] = $this->readValue($fargs[$i]);
         }
+
+        switch ($func) {
+            case 'safe':
+                $v = htmlspecialchars($v);
+                break;
+            case 'text':
+                $v = str_replace(["\n", '  ', "\t"], ["\n<br>", '&nbsp;&nbsp;', '&nbsp;&nbsp;&nbsp;&nbsp;'], htmlspecialchars($v));
+                break;
+
+            case 'lowercase':
+                $v = mb_strtolower($v, 'utf-8');
+                break;
+            case 'uppercase':
+                $v = mb_strtoupper($v, 'utf-8');
+                break;
+
+            case 'url':
+                $v = htmlspecialchars($v);
+                break;
+            case 'urlparam':
+                $v = rawurlencode($v);
+                break;
+
+            case 'json':
+                $v = json_encode($v);
+                break;
+
+            case 'count':
+                $v = count($v);
+                break;
+
+            case 'isarray':
+                $v = is_array($v);
+                break;
+            case 'keys':
+                $v = array_keys($v);
+                break;
+
+            case 'join':
+                if ($facnt >= 1) {
+                    $v = join($fargs[0], $v);
+                }
+                break;
+
+            case 'split':
+                if ($facnt >= 1) {
+                    $v = explode($fargs[0], $v);
+                }
+                break;
+
+            case 'substr':
+                if ($facnt >= 1) {
+                    if ($facnt >= 2) {
+                        $v = substr($v, $fargs[0], $fargs[1]);
+                    } else {
+                        $v = substr($v, $fargs[0]);
+                    }
+                }
+                break;
+
+            case 'slice':
+                if ($facnt >= 1) {
+                    if ($facnt >= 2) {
+                        $v = array_slice($v, $fargs[0], $fargs[1]);
+                    } else {
+                        $v = array_slice($v, $fargs[0]);
+                    }
+                }
+                break;
+
+            default:
+                foreach (self::$USER_FUNCS as $f) {
+                    $v = $f($v, $func, $fargs);
+                }
+                break;
+        }
+
+        return $v;
+    }
+
+    private function &readValueReference($op)
+    {
+        switch ($op[0]) {
+            case 'l':
+                if ($op[1] == 'this')
+                    return $this->values;
+                if (!array_key_exists($op[1], $this->values))
+                    $this->values[$op[1]] = false;
+                return $this->values[$op[1]];
+
+            case 'g':
+                if ($op[1] === null)
+                    return self::$GLOB_VARS;
+                if (!array_key_exists($op[1], self::$GLOB_VARS))
+                    self::$GLOB_VARS[$op[1]] = false;
+                return self::$GLOB_VARS[$op[1]];
+
+            case '[p':
+                $v =& $this->readValueReference($op[1]);
+                $k = '' . $this->readValue($op[2]);
+
+                if (is_array($v)) {
+                    if (!array_key_exists($k, $v))
+                        $v[$k] = false;
+                    return $v[$k];
+                } else if (isset($v->$k)) {
+                    return $v->$k;
+                }
+
+                break;
+
+            case '.i':
+                if ($op[1][0] == 'l') {
+                    if ($op[1][1] == 'this') {
+                        $v1 =& $this->values;
+                    } else if (array_key_exists($op[1][1], $this->values)) {
+                        $v1 =& $this->values[$op[1][1]];
+                    } else {
+                        throw new \Exception();
+                    }
+                } else {
+                    $v1 =& $this->readValueReference($op[1]);
+                }
+
+                $v2 = $op[2][0] == 'l' ? $op[2][1] : '' . $this->readValue($op[2]);
+
+                if (is_array($v1)) {
+                    if (!array_key_exists($v2, $v1))
+                        $v1[$v2] = false;
+                    return $v1[$v2];
+                } else if (isset($v1->$v2)) {
+                    return $v1->$v2;
+                }
+
+                break;
+        }
+
+        throw new \Exception();
+    }
+
+    public function getResult()
+    {
+        return $this->res;
+    }
+
+    public static function build_str($tplstr, array $values)
+    {
+        $c = new TemplateCompiler();
+        $c->compile($tplstr);
+        $p = new Template($c->getProgram());
+        $p->run($values);
+        return $p->getResult();
     }
 }

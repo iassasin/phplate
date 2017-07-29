@@ -27,81 +27,21 @@ class TemplateCompiler
         return $this->res;
     }
 
-    private function append($str, $stripl = false, $stripr = false)
+    public function compile($tpl)
     {
-        if ($stripl) {
-            $str = preg_replace("/^( |\t)*(\r\n|[\r\n])/", '$2', $str, 1);
-        }
+        $this->lastop = false;
+        $this->pgm = [];
 
-        if ($stripr) {
-            $str = preg_replace("/(\r\n|[\r\n])( |\t)*$/", '', $str, 1);
-        }
+        $this->lexer->setInput($tpl);
+        $this->lexer->nextToken();
+        $this->parse();
 
-        if ($str != '')
-            $this->pgm[] = ['str', $str];
+        return true;
     }
 
-    private function processExpression()
+    public function getProgram()
     {
-        $arg = $this->lexer->parseExpression();
-        if (in_array($arg[0], ['=i', '+=i', '-=i', '*=i', '/=i'])) {
-            $this->pgm[] = ['calc', $arg];
-        } else {
-            $this->pgm[] = ['var', $arg];
-        }
-    }
-
-    private function processStatementIf()
-    {
-        DEBUG('+ if call');
-        $pgm = ['if'];
-        if ($this->lexer->nextToken()) {
-            $pgm[] = $this->lexer->parseExpression();
-
-            $oldpgm = $this->pgm;
-            $this->pgm = [];
-
-            $this->parse();
-
-            if ($this->lexer->isToken(TemplateLexer::TOK_ID, 'else')) {
-                $pgm[] = $this->pgm;
-                $this->pgm = [];
-
-                if (!$this->lexer->nextToken()) {
-                    $this->lexer->error('Excepted "end" for "if"');
-                }
-
-                $this->lastop = true;
-                if ($this->lexer->isToken(TemplateLexer::TOK_ID, 'if')) {
-                    $this->processStatementIf();
-
-                    $pgm[] = $this->pgm;
-
-                    $this->pgm = $oldpgm;
-                    $this->pgm[] = $pgm;
-
-                    return;
-                } else {
-                    $this->parse();
-                    if (!$this->lexer->isToken(TemplateLexer::TOK_ID, 'end')) {
-                        $this->lexer->error('Excepted "end" for "if"');
-                    }
-                    $pgm[] = $this->pgm;
-                }
-            } else if (!$this->lexer->isToken(TemplateLexer::TOK_ID, 'end')) {
-                $this->lexer->error('Excepted "end" for "if"');
-            } else {
-                $pgm[] = $this->pgm;
-                $pgm[] = [];
-            }
-            $this->pgm = $oldpgm;
-            $this->pgm[] = $pgm;
-
-            $this->lexer->nextToken();
-        } else {
-            $this->lexer->error('Excepted condition in "if"');
-        }
-        DEBUG('- if call');
+        return $this->pgm;
     }
 
     private function processStatement()
@@ -266,58 +206,57 @@ class TemplateCompiler
         }
     }
 
-    private function processWidget()
+    private function processStatementIf()
     {
-        if ($this->lexer->toktype != TemplateLexer::TOK_NONE) {
-            if ($this->lexer->toktype == TemplateLexer::TOK_ID) {
-                $wname = $this->lexer->token;
-                $attrs = [];
+        DEBUG('+ if call');
+        $pgm = ['if'];
+        if ($this->lexer->nextToken()) {
+            $pgm[] = $this->lexer->parseExpression();
 
-                $this->lexer->nextToken();
-                while ($this->lexer->toktype == TemplateLexer::TOK_ID) {
-                    $aname = $this->lexer->token;
+            $oldpgm = $this->pgm;
+            $this->pgm = [];
 
-                    $this->lexer->nextToken();
-                    if (!$this->lexer->isToken(TemplateLexer::TOK_OP, '=')) {
-                        $attrs[$aname] = ['r', true];
-                    } else {
-                        $this->lexer->nextToken();
-                        $attrs[$aname] = $this->lexer->parseExpression();
-                    }
+            $this->parse();
+
+            if ($this->lexer->isToken(TemplateLexer::TOK_ID, 'else')) {
+                $pgm[] = $this->pgm;
+                $this->pgm = [];
+
+                if (!$this->lexer->nextToken()) {
+                    $this->lexer->error('Excepted "end" for "if"');
                 }
 
-                $autoclose = $this->lexer->isToken(TemplateLexer::TOK_ESC, '/>>');
+                $this->lastop = true;
+                if ($this->lexer->isToken(TemplateLexer::TOK_ID, 'if')) {
+                    $this->processStatementIf();
 
-                if (!$autoclose && !$this->lexer->isToken(TemplateLexer::TOK_ESC, '>>')) {
-                    $this->lexer->error('Excepted >>');
-                }
+                    $pgm[] = $this->pgm;
 
-                if ($autoclose) {
-                    $body = [];
-                } else {
-                    $oldpgm = $this->pgm;
-                    $this->pgm = [];
-                    $this->lexer->nextToken();
-                    $this->parse();
-
-                    $body = $this->pgm;
                     $this->pgm = $oldpgm;
+                    $this->pgm[] = $pgm;
 
-                    if (!$this->lexer->isToken(TemplateLexer::TOK_OP, '/')) {
-                        $this->lexer->error('Excepted end of widget');
+                    return;
+                } else {
+                    $this->parse();
+                    if (!$this->lexer->isToken(TemplateLexer::TOK_ID, 'end')) {
+                        $this->lexer->error('Excepted "end" for "if"');
                     }
-
-                    $this->lexer->nextToken();
-                    if (!$this->lexer->isToken(TemplateLexer::TOK_ID, $wname)) {
-                        $this->lexer->error('Invalid end widget name, excepted "' . $wname . '"');
-                    }
-
-                    $this->lexer->nextToken();
+                    $pgm[] = $this->pgm;
                 }
-
-                $this->pgm[] = ['widg', $wname, $attrs, $body];
+            } else if (!$this->lexer->isToken(TemplateLexer::TOK_ID, 'end')) {
+                $this->lexer->error('Excepted "end" for "if"');
+            } else {
+                $pgm[] = $this->pgm;
+                $pgm[] = [];
             }
+            $this->pgm = $oldpgm;
+            $this->pgm[] = $pgm;
+
+            $this->lexer->nextToken();
+        } else {
+            $this->lexer->error('Excepted condition in "if"');
         }
+        DEBUG('- if call');
     }
 
     public function parse()
@@ -401,20 +340,81 @@ class TemplateCompiler
         return false;
     }
 
-    public function compile($tpl)
+    private function append($str, $stripl = false, $stripr = false)
     {
-        $this->lastop = false;
-        $this->pgm = [];
+        if ($stripl) {
+            $str = preg_replace("/^( |\t)*(\r\n|[\r\n])/", '$2', $str, 1);
+        }
 
-        $this->lexer->setInput($tpl);
-        $this->lexer->nextToken();
-        $this->parse();
+        if ($stripr) {
+            $str = preg_replace("/(\r\n|[\r\n])( |\t)*$/", '', $str, 1);
+        }
 
-        return true;
+        if ($str != '')
+            $this->pgm[] = ['str', $str];
     }
 
-    public function getProgram()
+    private function processWidget()
     {
-        return $this->pgm;
+        if ($this->lexer->toktype != TemplateLexer::TOK_NONE) {
+            if ($this->lexer->toktype == TemplateLexer::TOK_ID) {
+                $wname = $this->lexer->token;
+                $attrs = [];
+
+                $this->lexer->nextToken();
+                while ($this->lexer->toktype == TemplateLexer::TOK_ID) {
+                    $aname = $this->lexer->token;
+
+                    $this->lexer->nextToken();
+                    if (!$this->lexer->isToken(TemplateLexer::TOK_OP, '=')) {
+                        $attrs[$aname] = ['r', true];
+                    } else {
+                        $this->lexer->nextToken();
+                        $attrs[$aname] = $this->lexer->parseExpression();
+                    }
+                }
+
+                $autoclose = $this->lexer->isToken(TemplateLexer::TOK_ESC, '/>>');
+
+                if (!$autoclose && !$this->lexer->isToken(TemplateLexer::TOK_ESC, '>>')) {
+                    $this->lexer->error('Excepted >>');
+                }
+
+                if ($autoclose) {
+                    $body = [];
+                } else {
+                    $oldpgm = $this->pgm;
+                    $this->pgm = [];
+                    $this->lexer->nextToken();
+                    $this->parse();
+
+                    $body = $this->pgm;
+                    $this->pgm = $oldpgm;
+
+                    if (!$this->lexer->isToken(TemplateLexer::TOK_OP, '/')) {
+                        $this->lexer->error('Excepted end of widget');
+                    }
+
+                    $this->lexer->nextToken();
+                    if (!$this->lexer->isToken(TemplateLexer::TOK_ID, $wname)) {
+                        $this->lexer->error('Invalid end widget name, excepted "' . $wname . '"');
+                    }
+
+                    $this->lexer->nextToken();
+                }
+
+                $this->pgm[] = ['widg', $wname, $attrs, $body];
+            }
+        }
+    }
+
+    private function processExpression()
+    {
+        $arg = $this->lexer->parseExpression();
+        if (in_array($arg[0], ['=i', '+=i', '-=i', '*=i', '/=i'])) {
+            $this->pgm[] = ['calc', $arg];
+        } else {
+            $this->pgm[] = ['var', $arg];
+        }
     }
 }
