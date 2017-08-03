@@ -1,15 +1,15 @@
 Добро пожаловать в Wiki по шаблонизатору phplate.
 
-- [[Быстрый старт]]
-- [[API]]
-- [[Синтаксис]]
- - [[Операторы]]
-- [[Аргументы]]
- - [[Глобальные аргументы]]
- - [[Пайп-функции]]
-- [[Конструкции]]
- - [[if]]
- - [[for]]
- - [[include и include_once|include]]
- - [[block]]
- - [[widget]]
+- [Быстрый старт](../README.md)
+- [API](api.md)
+- [Синтаксис](syntax.md)
+  - [Операторы](operators.md)
+- [Аргументы]
+  - [Глобальные аргументы]
+  - [Пайп-функции]
+- [Конструкции](constructions.md)
+  - [if](constructions/if.md)
+  - [for](constructions/for.md)
+  - [include и include_once](constructions/include.md)
+  - [block](constructions/block.md)
+  - [widget](constructions/widget.md)
