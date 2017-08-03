@@ -201,7 +201,6 @@ class TemplateCompiler {
 	}
 
 	private function processStatementIf(){
-		DEBUG('+ if call');
 		$pgm = ['if'];
 		if ($this->lexer->nextToken()){
 			$pgm[] = $this->lexer->parseExpression();
@@ -249,7 +248,6 @@ class TemplateCompiler {
 		} else {
 			$this->lexer->error('Excepted condition in "if"');
 		}
-		DEBUG('- if call');
 	}
 
 	public function parse(){

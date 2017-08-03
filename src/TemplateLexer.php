@@ -63,7 +63,6 @@ class TemplateLexer {
 		self::$POST_OPS = [
 			10 => [
 				'|' => function (TemplateLexer $parser, $val, $lvl){
-					DEBUG('+ operator_|p_call');
 					if (!$parser->nextToken() || $parser->toktype != self::TOK_ID){
 						$parser->error('Function name excepted in "|"');
 
@@ -90,14 +89,10 @@ class TemplateLexer {
 						}
 					}
 
-					DEBUG('- operator_|p_end');
-
 					return ['|p', $val, $fname, $args];
 				},
 
 				'[' => function (TemplateLexer $parser, $val, $lvl){
-					DEBUG('+ operator_[p_call');
-
 					if (!$parser->nextToken()){
 						$parser->error('Argument excepted in "["');
 
@@ -114,13 +109,10 @@ class TemplateLexer {
 
 					$parser->nextToken();
 
-					DEBUG('- operator_[p_end');
-
 					return ['[p', $val, $arg];
 				},
 
 				'(' => function (TemplateLexer $parser, $val, $lvl){
-					DEBUG('+ operator_(p_call');
 					$args = [];
 
 					$parser->nextToken();
@@ -139,8 +131,6 @@ class TemplateLexer {
 					}
 
 					$parser->nextToken();
-
-					DEBUG('- operator_(p_end');
 
 					return ['(p', $val, $args];
 				},
@@ -173,23 +163,17 @@ class TemplateLexer {
 	}
 
 	public function infix($lvl){
-		DEBUG('+ infix_call');
-
 		$a1 = $this->prefix($lvl);
 
 		while ($this->toktype == self::TOK_OP){
 			$op = $this->token;
 			$oplvl = $this->findOperator(self::$INF_OPS, $lvl, $op);
 			if ($oplvl == null){
-				DEBUG('- infix_end_1');
-
 				return $a1;
 			}
 
 			if (!$this->nextToken()){
 				$this->error('Unexcepted end of file. Operator excepted.');
-				DEBUG('- infix_end_2');
-
 				return null;
 			}
 
@@ -202,8 +186,6 @@ class TemplateLexer {
 
 			$a1 = $this->postfix($lvl, $a1);
 		}
-
-		DEBUG('- infix_end_3');
 
 		return $a1;
 	}
@@ -220,7 +202,6 @@ class TemplateLexer {
 	 */
 
 	public function prefix($lvl){
-		DEBUG('+ prefix_call');
 		switch ($this->toktype){
 			case self::TOK_OP:
 				$op = $this->token;
@@ -252,7 +233,6 @@ class TemplateLexer {
 					}
 
 					$val = ['b', $bname, $args];
-					DEBUG('- prefix_end_block');
 
 					return $this->postfix($lvl, $val);
 				} else if ($op == '('){
@@ -272,8 +252,6 @@ class TemplateLexer {
 
 					$this->nextToken();
 
-					DEBUG('- prefix_end_)');
-
 					return $this->postfix($lvl, $val);
 				} else if ($op == '$'){
 					$gvname = null;
@@ -285,7 +263,6 @@ class TemplateLexer {
 					}
 
 					$val = ['g', $gvname];
-					DEBUG('- prefix_end_$');
 
 					return $this->postfix($lvl, $val);
 				} else {
@@ -308,8 +285,6 @@ class TemplateLexer {
 						$val = [$oplvl[1] . 'e', $val];
 					}
 
-					DEBUG('- prefix_end_op');
-
 					return $this->postfix($lvl, $val);
 				}
 
@@ -329,21 +304,18 @@ class TemplateLexer {
 						break;
 				}
 				$this->nextToken();
-				DEBUG('- prefix_end_id');
 
 				return $this->postfix($lvl, $res);
 
 			case self::TOK_NUM:
 				$res = ['r', +$this->token];
 				$this->nextToken();
-				DEBUG('- prefix_end_num');
 
 				return $this->postfix($lvl, $res);
 
 			case self::TOK_STR:
 				$res = ['r', $this->token];
 				$this->nextToken();
-				DEBUG('- prefix_end_str');
 
 				return $this->postfix($lvl, $res);
 
@@ -355,8 +327,6 @@ class TemplateLexer {
 				$this->error('Unknown token (type: ' . $this->toktype . '): "' . $this->token . '"');
 				break;
 		}
-
-		DEBUG('- prefix_end_null');
 
 		return null;
 	}
@@ -371,7 +341,6 @@ class TemplateLexer {
 				$res = $this->nextToken_code();
 				break;
 		}
-		DEBUG('Token: ' . ($res ? '[' . $this->toktype . ', "' . $this->token . '"]' : 'end'));
 
 		return $res;
 	}
@@ -668,7 +637,6 @@ class TemplateLexer {
 	}
 
 	public function postfix($lvl, $val){
-		DEBUG('+ postfix_call');
 		while ($this->toktype == self::TOK_OP){
 			$oplvl = $this->findOperator(self::$POST_OPS, $lvl, $this->token);
 			if ($oplvl == null){
@@ -687,13 +655,10 @@ class TemplateLexer {
 			}
 		}
 
-		DEBUG('- postfix_end');
-
 		return $val;
 	}
 
 	public function findOperator($ops, $lvl, $op){
-		DEBUG('search operator: ' . $op . ' ' . $lvl);
 		foreach ($ops as $level => $lops){
 			if ($level >= $lvl){
 				foreach ($lops as $opk => $opv){
