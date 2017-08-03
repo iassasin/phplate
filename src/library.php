@@ -11,8 +11,8 @@ $PDEBUG = false;
 
 function DEBUG($str)
 {
-    global $PDEBUG;
-    if ($PDEBUG) {
-        echo htmlspecialchars($str) . "\n<br>";
-    }
+	global $PDEBUG;
+	if ($PDEBUG) {
+		echo htmlspecialchars($str) . "\n<br>";
+	}
 }
