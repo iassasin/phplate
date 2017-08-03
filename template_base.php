@@ -1489,7 +1489,9 @@ class Template {
 				
 			case '+e': return +$this->readValue($op[1]);
 			case '-e': return -$this->readValue($op[1]);
-			case '!e': return !$this->readValue($op[1]);
+			
+			case '!e':
+			case 'note': return !$this->readValue($op[1]);
 			
 			case '+i':
 				$v1 = $this->readValue($op[1]);
