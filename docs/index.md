@@ -6,7 +6,7 @@
   - [Операторы](operators.md)
 - [Аргументы]
   - [Глобальные аргументы]
-  - [Пайп-функции]
+  - [Пайп-функции](pipe-functions.md)
 - [Конструкции](constructions.md)
   - [if](constructions/if.md)
   - [for](constructions/for.md)
