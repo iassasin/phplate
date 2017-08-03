@@ -195,7 +195,6 @@ class TemplateCompiler {
 				}
 			} else {
 				$this->processExpression();
-				//$this->lexer->error('Unexcepted token('.$this->lexer->toktype.'): '.$this->lexer->token);
 			}
 		}
 	}

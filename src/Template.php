@@ -49,7 +49,7 @@ class Template {
 	/**
 	 * Вставляет в шаблон $tplname переменные из массива $values
 	 * $tplname - имя шаблона
-	 * $values - ассоциативный массив параметров вида ['arg' => 'val'].
+	 * $values - ассоциативный массив параметров вида ['arg' => 'val'] любой вложенности.
 	 */
 	public static function build($tplname, array $values){
 		$p = self::compile($tplname);
@@ -67,7 +67,6 @@ class Template {
 
 		if (self::$CACHE_ENABLED && file_exists($tcpath)){
 			if (!file_exists($tpath) || filemtime($tcpath) >= filemtime($tpath)){
-//				$pgm = unserialize(file_get_contents($tcpath), ['allowed_classes' => false]);
 				$pgm = json_decode(file_get_contents($tcpath), true);
 				if ($pgm !== false){
 					$p = new Template($pgm);
@@ -259,7 +258,6 @@ class Template {
 	 * ['[p', $val, $key]
 	 * ['(p', $func, [$arg1, $arg2, ...]]
 	 */
-
 	private function readValue($op){
 		switch ($op[0]){
 			case 'r':
