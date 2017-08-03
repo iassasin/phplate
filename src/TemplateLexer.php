@@ -190,17 +190,6 @@ class TemplateLexer {
 		return $a1;
 	}
 
-	/* State Machine:
-	 * Реализация проверки операторов += -=
-	 * [[
-	 *   '+' => 1,
-	 *   '-' => 1,
-	 * ],[
-	 *   '=' => true,
-	 * ]]
-	 * return: false если машина получила false, иначе строку
-	 */
-
 	public function prefix($lvl){
 		switch ($this->toktype){
 			case self::TOK_OP:
@@ -614,6 +603,16 @@ class TemplateLexer {
 		throw new \Exception('line ' . $this->cline . ': ' . $msg);
 	}
 
+	/* State Machine:
+	 * Реализация проверки операторов += -=
+	 * [[
+	 *   '+' => 1,
+	 *   '-' => 1,
+	 * ],[
+	 *   '=' => true,
+	 * ]]
+	 * return: false если машина получила false, иначе строку
+	 */
 	private function checkNextSM($pos, $m){
 		$res = '';
 		$state = 0;
