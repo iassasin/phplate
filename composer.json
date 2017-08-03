@@ -1,16 +1,21 @@
 {
-  "name": "iassasin/phplate",
-  "description": "Lightweight template engine for PHP",
-  "type": "library",
-  "license": "MIT",
-  "authors": [
-  ],
-  "autoload": {
-    "psr-4": {
-      "Iassasin\\Phplate\\": "src"
+    "name": "iassasin/phplate",
+    "description": "Lightweight template engine for PHP",
+    "homepage": "https://github.com/iassasin/phplate",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "iassasin",
+            "email": "iassasin@yandex.ru"
+        }
+    ],
+    "require": {
+        "php": ">=5.6"
     },
-    "files": [
-      "src/library.php"
-    ]
-  }
+    "autoload": {
+        "psr-4": {
+            "Iassasin\\Phplate\\": "src"
+        }
+    }
 }

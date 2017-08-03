@@ -1,6 +1,6 @@
 <?php
 /**
- * Author: Assasin (assasin@sinair.ru)
+ * Author: Assasin (iassasin@yandex.ru)
  * License: beerware
  * Use for good
  */
