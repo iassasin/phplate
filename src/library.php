@@ -9,10 +9,9 @@ namespace Iassasin\Phplate;
 
 $PDEBUG = false;
 
-function DEBUG($str)
-{
+function DEBUG($str){
 	global $PDEBUG;
-	if ($PDEBUG) {
+	if ($PDEBUG){
 		echo htmlspecialchars($str) . "\n<br>";
 	}
 }
