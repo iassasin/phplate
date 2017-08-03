@@ -1281,6 +1281,12 @@ class Template {
 					}
 				}
 				break;
+				
+			case 'replace':
+				if ($facnt >= 2){
+					$v = str_replace($fargs[0], $fargs[1], $v);
+				}
+				break;
 			
 			default:
 				foreach (self::$USER_FUNCS as $f){
