@@ -1,6 +1,10 @@
 {
+  "name": "iassasin/phplate",
+  "description": "Lightweight template engine for PHP",
   "type": "library",
   "license": "MIT",
+  "authors": [
+  ],
   "autoload": {
     "psr-4": {
       "Iassasin\\Phplate\\": "src"
