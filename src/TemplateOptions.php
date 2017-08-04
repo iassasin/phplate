@@ -9,7 +9,7 @@ namespace Iassasin\Phplate;
 
 class TemplateOptions
 {
-	const OPTION_DATE_FORMAT = 'date_format';
+	const OPTION_DATE_FORMAT = 1;
 
 	protected $options;
 
