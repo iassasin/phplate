@@ -54,11 +54,8 @@
 
 ```php
 
-Template::addUserFunctionHandler(function ($variable, $name) {
-    if ($name === 'json_pretty') { // пока что нужно использовать такие костыли
-        return nl2br(str_replace(' ', '&nbsp;', json_encode($variable, JSON_PRETTY_PRINT)));
-    }
-    return $variable;
+Template::addUserFunctionHandler('json_pretty', function ($variable, $args = []) {
+    return nl2br(str_replace(' ', '&nbsp;', json_encode($variable, JSON_PRETTY_PRINT)));
 });
 echo Template::build('template', ['arr' => ['Object' => ['Field1' => 1, 'Field2' => null]]]);
 

@@ -38,7 +38,7 @@ class Template {
 
 	public static function addUserFunctionHandler($name, $f){
 		if (isset(self::$USER_FUNCS[$name])) {
-			throw new \RuntimeException(sprintf('Функция с именем "%s" уже была добавлена.', $name));
+			throw new \RuntimeException("Функция с именем \"{$name}\" уже была добавлена.");
 		}
 		if (is_callable($f)){
 			self::$USER_FUNCS[$name] = $f;

@@ -22,9 +22,8 @@ public static function Template::addUserFunctionHandler($f)
 
 Назначает пользовательский обработчик пайп-функций
 
-- **`function $f`** - функция вида **`function ($val, $func, $fargs)`**
+- **`function $f`** - функция вида **`function ($val, $fargs)`**
  - **`mixed $val`** - исходное значение
- - **`string $func`** - имя вызываемой пайп-функции
  - **`array $fargs`** - массив переданных пайп-функции аргументов
  - **Возвращаемое значение**:  новое значение `$val`
 
