@@ -547,18 +547,25 @@ class Template {
 				break;
 
 			case 'date':
-				$format = $this->options->getDateFormat();
 				if ($facnt >= 1){
 					$format = $fargs[0];
+				} else {
+					$format = $this->options->getDateFormat();
 				}
+				$oldVal = $v;
 				if ($v instanceof \DateTimeInterface){
 					$v = $v->format($format);
 					// выходим, чтобы сразу вернуть результат - $v
 					break;
-				} elseif (!is_numeric($v)){
-					$v = strtotime($v);
+				} else {
+				    if (!is_numeric($v)){
+						$v = strtotime($v);
+					}
+					$v = date($format, $v);
 				}
-				$v = date($format, $v);
+				if (false === $v){
+					throw new \RuntimeException('Некорректное значение даты-времени: ' . $oldVal);
+				}
 				break;
 
 			default:
