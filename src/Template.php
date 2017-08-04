@@ -36,9 +36,12 @@ class Template {
 		self::$CACHE_ENABLED = $cache;
 	}
 
-	public static function addUserFunctionHandler($f){
+	public static function addUserFunctionHandler($name, $f){
+		if (isset(self::$USER_FUNCS[$name])) {
+			throw new \RuntimeException(sprintf('Функция с именем "%s" уже была добавлена.', $name));
+		}
 		if (is_callable($f)){
-			self::$USER_FUNCS[] = $f;
+			self::$USER_FUNCS[$name] = $f;
 		}
 	}
 
@@ -540,8 +543,8 @@ class Template {
 				break;
 
 			default:
-				foreach (self::$USER_FUNCS as $f){
-					$v = $f($v, $func, $fargs);
+				if (isset(self::$USER_FUNCS[$func])) {
+					$v = self::$USER_FUNCS[$func]($v, $fargs);
 				}
 				break;
 		}
