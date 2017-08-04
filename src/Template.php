@@ -14,9 +14,14 @@ class Template {
 	private static $TPL_CACHE = [];
 	private static $USER_FUNCS = [];
 	private static $GLOB_VARS = [];
+    /**
+     * @var TemplateOptions|null
+     */
+	private static $OPTIONS;
 
 	public $pgm;
 	public $values;
+	public $options;
 	public $res;
 	private $includes;
 	private $blocks;
@@ -29,11 +34,13 @@ class Template {
 		$this->includes = [];
 		$this->blocks = [];
 		$this->widgets = [];
+		$this->options = self::$OPTIONS ?: new TemplateOptions();
 	}
 
-	public static function init($tplpath, $cache = true){
+	public static function init($tplpath, $cache = true, TemplateOptions $options = null){
 		self::$TPL_PATH = $tplpath;
 		self::$CACHE_ENABLED = $cache;
+		self::$OPTIONS = $options;
 	}
 
 	public static function addUserFunctionHandler($f){
@@ -537,6 +544,21 @@ class Template {
 				if ($facnt >= 2){
 					$v = str_replace($fargs[0], $fargs[1], $v);
 				}
+				break;
+
+			case 'date':
+				$format = $this->options->getDateFormat();
+				if ($facnt >= 1){
+					$format = $fargs[0];
+				}
+				if ($v instanceof \DateTimeInterface){
+					$v = $v->format($format);
+					// выходим, чтобы сразу вернуть результат - $v
+					break;
+				} elseif (!is_numeric($v)){
+					$v = strtotime($v);
+				}
+				$v = date($format, $v);
 				break;
 
 			default:
