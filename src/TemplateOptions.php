@@ -14,7 +14,7 @@ class TemplateOptions
 	protected $options;
 
 	public function getDateFormat(){
-		return $this->options[self::OPTION_DATE_FORMAT] ?: 'H:i Y-m-d';
+		return $this->options[self::OPTION_DATE_FORMAT] ?: 'Y-m-d H:i:s';
 	}
 
 	/**
