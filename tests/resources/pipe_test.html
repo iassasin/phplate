@@ -1,0 +1,16 @@
+{{ '<>'|safe }}|{{ '
+Hello
+World!'|text }}|{{
+'HELLO WORLD'|lowercase }}|{{
+'hello world'|uppercase }}|{{
+'&'|urlparam }}|{{
+arr|json }}|{{
+arr|count }}|{?if arr|isarray ?}is array{? end ?}|{{
+arr|keys|join(',') }}|{?
+myArr = '1,2'|split(',') ?}{{ myArr[0] }}:{{ myArr[1] }}|{{
+'Hello world!'|substr(1,3) }}|{{
+'Hello world!'|substr(3) }}|{{
+slices|slice(2)|join(',') }}|{{
+slices|slice(2,1)|join(',') }}|{{
+'Hello world!'|replace('world','hello') }}|{{
+num|my_pow(2) }}
