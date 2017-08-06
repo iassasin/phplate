@@ -110,7 +110,11 @@ class TemplateCompiler {
 					case 'include':
 						$pgm = [$this->lexer->token == 'include' ? 'incl' : 'inclo'];
 
-						if (!$this->lexer->nextToken() || !($this->lexer->toktype == TemplateLexer::TOK_ID || $this->lexer->toktype == TemplateLexer::TOK_STR)){
+						if (
+							!$this->lexer->nextToken()
+							|| !($this->lexer->toktype == TemplateLexer::TOK_ID
+								|| $this->lexer->toktype == TemplateLexer::TOK_STR)
+						){
 							$this->lexer->error('Excepted including template name');
 						}
 
@@ -118,7 +122,10 @@ class TemplateCompiler {
 
 						$args = [];
 						$this->lexer->nextToken();
-						while ($this->lexer->toktype != TemplateLexer::TOK_NONE && $this->lexer->toktype != TemplateLexer::TOK_ESC){
+						while (
+							$this->lexer->toktype != TemplateLexer::TOK_NONE
+							&& $this->lexer->toktype != TemplateLexer::TOK_ESC
+						){
 							$args[] = $this->lexer->parseExpression();
 						}
 
@@ -301,7 +308,10 @@ class TemplateCompiler {
 								return true;
 							}
 							$this->processWidget();
-							if (!($this->lexer->isToken(TemplateLexer::TOK_ESC, '>>') || $this->lexer->isToken(TemplateLexer::TOK_ESC, '/>>'))){
+							if (
+								!($this->lexer->isToken(TemplateLexer::TOK_ESC, '>>')
+								|| $this->lexer->isToken(TemplateLexer::TOK_ESC, '/>>'))
+							){
 								$this->lexer->error('Excepted >>');
 							}
 							$this->lexer->nextToken();
@@ -318,7 +328,10 @@ class TemplateCompiler {
 					if ($this->endesc == '}}'){
 						$this->processExpression();
 					} else {
-						if ($this->lexer->toktype == TemplateLexer::TOK_ID && in_array($this->lexer->token, ['end', 'else'])){
+						if (
+							$this->lexer->toktype == TemplateLexer::TOK_ID
+							&& in_array($this->lexer->token, ['end', 'else'])
+						){
 							return true;
 						}
 						$this->processStatement();

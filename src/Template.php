@@ -14,9 +14,9 @@ class Template {
 	private static $TPL_CACHE = [];
 	private static $USER_FUNCS = [];
 	private static $GLOB_VARS = [];
-    /**
-     * @var TemplateOptions|null
-     */
+	/**
+	 * @var TemplateOptions|null
+	 */
 	private static $OPTIONS;
 
 	public $pgm;
@@ -461,8 +461,6 @@ class Template {
 			default:
 				return false;
 		}
-
-		return false;
 	}
 
 	private function applyFunction($v, $func, $fargs){
@@ -476,7 +474,11 @@ class Template {
 				$v = htmlspecialchars($v);
 				break;
 			case 'text':
-				$v = str_replace(["\n", '  ', "\t"], ["\n<br>", '&nbsp;&nbsp;', '&nbsp;&nbsp;&nbsp;&nbsp;'], htmlspecialchars($v));
+				$v = str_replace(
+					["\n", '  ', "\t"],
+					["\n<br>", '&nbsp;&nbsp;', '&nbsp;&nbsp;&nbsp;&nbsp;'],
+					htmlspecialchars($v)
+				);
 				break;
 
 			case 'lowercase':
@@ -557,12 +559,12 @@ class Template {
 					$v = $v->format($format);
 					// выходим, чтобы сразу вернуть результат - $v
 					break;
-				} else {
-				    if (!is_numeric($v)){
-						$v = strtotime($v);
-					}
-					$v = date($format, $v);
 				}
+				if (!is_numeric($v)){
+					$v = strtotime($v);
+				}
+				$v = date($format, $v);
+
 				if (false === $v){
 					throw new \RuntimeException('Некорректное значение даты-времени: ' . $oldVal);
 				}
