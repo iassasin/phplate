@@ -320,15 +320,27 @@ class TemplateLexer {
 		}
 
 		$vals = [];
-		if (!$this->isToken(self::TOK_OP, ']')){
-			$vals[] = $this->infix(1);
-			while ($this->isToken(self::TOK_OP, ',')){
-				$this->nextToken();
-				if ($this->isToken(self::TOK_OP, ']')) // when trailing comma
-					break;
+		while (true){
+			if ($this->isToken(self::TOK_OP, ']')) // when trailing comma
+				break;
 
-				$vals[] = $this->infix(1);
+			$val = $this->infix(1);
+			if ($this->isToken(self::TOK_OP, '=>')){
+				if ($val[0] != 'r'){
+					$this->error('Excepted constant for key in array');
+				}
+
+				$key = $val[1];
+				$this->nextToken();
+				$vals[$key] = $this->infix(1);
+			} else {
+				$vals[] = $val;
 			}
+
+			if (!$this->isToken(self::TOK_OP, ','))
+				break;
+
+			$this->nextToken();
 		}
 
 		if (!$this->isToken(self::TOK_OP, ']')){
