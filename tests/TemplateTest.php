@@ -79,4 +79,29 @@ class TemplateTest extends PHPUnit_Framework_TestCase
 		}]);
 		$this->assertEquals('1 a 3.2', $res);
 	}
+
+	public function testInlineArrays(){
+		$res = Template::build_str('{{ [5, "ght", 2+2, "world", ]|join("") }}', []);
+		$this->assertEquals('5ght4world', $res);
+
+		$res = Template::build_str(
+			'{? for i in [["Boku", "ga"], ["sabishiku"]]; i|join(" ") + " "; end ?}',
+			[]
+		);
+		$this->assertEquals('Boku ga sabishiku ', $res);
+
+		$res = Template::build_str(
+			'{? arr = ["Kono" => "machi", "de" => "ikiteiru"];
+				for i in arr|keys; i; " "; arr[i]; " "; end ?}',
+			[]
+		);
+		$this->assertEquals('Kono machi de ikiteiru ', $res);
+
+		$res = Template::build_str(
+			'{? arr = [5 => 10, "y", 7 => 2];
+				for i in arr|keys; i; " "; arr[i]; " "; end ?}',
+			[]
+		);
+		$this->assertEquals('5 10 6 y 7 2 ', $res);
+	}
 }
