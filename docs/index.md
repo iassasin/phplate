@@ -7,6 +7,7 @@
 - [Аргументы]
   - [Глобальные аргументы]
   - [Пайп-функции](pipe-functions.md)
+  - [Опции шаблонизатора](options.md)
 - [Конструкции](constructions.md)
   - [if](constructions/if.md)
   - [for](constructions/for.md)

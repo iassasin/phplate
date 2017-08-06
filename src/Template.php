@@ -14,9 +14,14 @@ class Template {
 	private static $TPL_CACHE = [];
 	private static $USER_FUNCS = [];
 	private static $GLOB_VARS = [];
+	/**
+	 * @var TemplateOptions|null
+	 */
+	private static $OPTIONS;
 
 	public $pgm;
 	public $values;
+	public $options;
 	public $res;
 	private $includes;
 	private $blocks;
@@ -29,11 +34,13 @@ class Template {
 		$this->includes = [];
 		$this->blocks = [];
 		$this->widgets = [];
+		$this->options = self::$OPTIONS ?: new TemplateOptions();
 	}
 
-	public static function init($tplpath, $cache = true){
+	public static function init($tplpath, $cache = true, TemplateOptions $options = null){
 		self::$TPL_PATH = $tplpath;
 		self::$CACHE_ENABLED = $cache;
+		self::$OPTIONS = $options;
 	}
 
 	public static function addUserFunctionHandler($name, $f){
@@ -457,8 +464,6 @@ class Template {
 			default:
 				return false;
 		}
-
-		return false;
 	}
 
 	private function applyFunction($v, $func, $fargs){
@@ -472,7 +477,11 @@ class Template {
 				$v = htmlspecialchars($v);
 				break;
 			case 'text':
-				$v = str_replace(["\n", '  ', "\t"], ["\n<br>", '&nbsp;&nbsp;', '&nbsp;&nbsp;&nbsp;&nbsp;'], htmlspecialchars($v));
+				$v = str_replace(
+					["\n", '  ', "\t"],
+					["\n<br>", '&nbsp;&nbsp;', '&nbsp;&nbsp;&nbsp;&nbsp;'],
+					htmlspecialchars($v)
+				);
 				break;
 
 			case 'lowercase':
@@ -539,6 +548,28 @@ class Template {
 			case 'replace':
 				if ($facnt >= 2){
 					$v = str_replace($fargs[0], $fargs[1], $v);
+				}
+				break;
+
+			case 'date':
+				if ($facnt >= 1){
+					$format = $fargs[0];
+				} else {
+					$format = $this->options->getDateFormat();
+				}
+				$oldVal = $v;
+				if ($v instanceof \DateTimeInterface){
+					$v = $v->format($format);
+					// выходим, чтобы сразу вернуть результат - $v
+					break;
+				}
+				if (!is_numeric($v)){
+					$v = strtotime($v);
+				}
+				$v = date($format, $v);
+
+				if (false === $v){
+					throw new \RuntimeException('Некорректное значение даты-времени: ' . $oldVal);
 				}
 				break;
 
