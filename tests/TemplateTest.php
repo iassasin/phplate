@@ -41,27 +41,22 @@ class TemplateTest extends PHPUnit_Framework_TestCase
 			'num' => 2,
 		]));
 		$i = 0;
-		$this->assertEquals('&lt;&gt;', $result[$i++]);
-		$this->assertEquals(<<<HTML
-
-<br>Hello
-<br>World!
-HTML
-			, $result[$i++]);
-		$this->assertEquals('hello world', $result[$i++]);
-		$this->assertEquals('HELLO WORLD', $result[$i++]);
-		$this->assertEquals('%26', $result[$i++]);
-		$this->assertEquals('{"Hello":"world!","1":"2"}', $result[$i++]);
-		$this->assertEquals(2, $result[$i++]);
-		$this->assertEquals('is array', $result[$i++]);
-		$this->assertEquals('Hello,1', $result[$i++]);
-		$this->assertEquals('1:2', $result[$i++]);
-		$this->assertEquals('ell', $result[$i++]);
-		$this->assertEquals('lo world!', $result[$i++]);
-		$this->assertEquals('3,4', $result[$i++]);
-		$this->assertEquals('3', $result[$i++]);
-		$this->assertEquals('Hello hello!', $result[$i++]);
-		$this->assertEquals(4, $result[$i++]);
-		$this->assertEquals(16, $i);
+		$this->assertEquals('&lt;&gt;', $result[$i++]); // safe
+		$this->assertEquals("\n<br>Hello\n<br>World!", $result[$i++]); // text
+		$this->assertEquals('hello world', $result[$i++]); // lowercase
+		$this->assertEquals('HELLO WORLD', $result[$i++]); // uppercase
+		$this->assertEquals('%26', $result[$i++]); // urlparam
+		$this->assertEquals('{"Hello":"world!","1":"2"}', $result[$i++]); // json
+		$this->assertEquals(2, $result[$i++]); // count
+		$this->assertEquals('is array', $result[$i++]); // isarray
+		$this->assertEquals('Hello,1', $result[$i++]); // join
+		$this->assertEquals('1:2', $result[$i++]); // split
+		$this->assertEquals('ell', $result[$i++]); // substr(two arguments)
+		$this->assertEquals('lo world!', $result[$i++]); // substr(one argument)
+		$this->assertEquals('3,4', $result[$i++]); // slice(one argument) & join
+		$this->assertEquals('3', $result[$i++]); // slice(two arguments) & join
+		$this->assertEquals('Hello hello!', $result[$i++]); // replace
+		$this->assertEquals(4, $result[$i++]); // тест работы пользовательской функции my_pow
+		$this->assertEquals(16, $i); // сколько тестов должно быть выполнено
 	}
 }
