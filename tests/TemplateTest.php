@@ -6,6 +6,7 @@
  */
 
 use Iassasin\Phplate\Template;
+use Iassasin\Phplate\TemplateOptions;
 
 /**
  * @covers \Iassasin\Phplate\Template
@@ -15,7 +16,9 @@ use Iassasin\Phplate\Template;
 class TemplateTest extends PHPUnit_Framework_TestCase
 {
 	public static function setUpBeforeClass(){
-		Template::init(__DIR__ . '/resources/', false);
+		Template::init(__DIR__ . '/resources/', (new TemplateOptions())
+			->setCacheEnabled(false)
+		);
 	}
 
 	public function testBuild(){

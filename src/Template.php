@@ -9,7 +9,6 @@ namespace Iassasin\Phplate;
 
 class Template {
 	public static $TPL_PATH = './';
-	public static $CACHE_ENABLED = false;
 
 	private static $TPL_CACHE = [];
 	private static $USER_FUNCS = [];
@@ -34,13 +33,11 @@ class Template {
 		$this->includes = [];
 		$this->blocks = [];
 		$this->widgets = [];
-		$this->options = self::$OPTIONS ?: new TemplateOptions();
 	}
 
-	public static function init($tplpath, $cache = true, TemplateOptions $options = null){
+	public static function init($tplpath, TemplateOptions $options = null){
 		self::$TPL_PATH = $tplpath;
-		self::$CACHE_ENABLED = $cache;
-		self::$OPTIONS = $options;
+		self::$OPTIONS = $options ?: new TemplateOptions();
 	}
 
 	public static function addUserFunctionHandler($name, $f){
@@ -75,7 +72,7 @@ class Template {
 		$tpath = self::$TPL_PATH . $tplname . '.html';
 		$tcpath = self::$TPL_PATH . $tplname . '.ctpl';
 
-		if (self::$CACHE_ENABLED && file_exists($tcpath)){
+		if (self::$OPTIONS->getCacheEnabled() && file_exists($tcpath)){
 			if (!file_exists($tpath) || filemtime($tcpath) >= filemtime($tpath)){
 				$pgm = json_decode(file_get_contents($tcpath), true);
 				if ($pgm !== false){
@@ -97,7 +94,7 @@ class Template {
 					$c->compile(file_get_contents($tpath));
 
 					$pgm = $c->getProgram();
-					if (self::$CACHE_ENABLED){
+					if (self::$OPTIONS->getCacheEnabled()){
 						file_put_contents($tcpath, json_encode($pgm));
 					}
 
@@ -555,7 +552,7 @@ class Template {
 				if ($facnt >= 1){
 					$format = $fargs[0];
 				} else {
-					$format = $this->options->getDateFormat();
+					$format = self::$OPTIONS->getDateFormat();
 				}
 				$oldVal = $v;
 				if ($v instanceof \DateTimeInterface){

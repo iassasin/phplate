@@ -10,6 +10,7 @@ namespace Iassasin\Phplate;
 class TemplateOptions
 {
 	const OPTION_DATE_FORMAT = 1;
+	const OPTION_CACHE_ENABLED = 2;
 
 	protected $options;
 
@@ -27,6 +28,23 @@ class TemplateOptions
 			throw new \LogicException("Invalid date format: \"{$format}\"");
 		}
 		$this->options[self::OPTION_DATE_FORMAT] = $format;
+
+		return $this;
+	}
+
+	public function getCacheEnabled(){
+		return isset($this->options[self::OPTION_CACHE_ENABLED]) ? $this->options[self::OPTION_CACHE_ENABLED] : true;
+	}
+
+	/**
+	 * @param bool $enabled
+	 * @return self
+	 */
+	public function setCacheEnabled($enabled){
+		if (!is_bool($enabled)){
+			throw new \LogicException("Invalid boolean value: \"$enabled\"");
+		}
+		$this->options[self::OPTION_CACHE_ENABLED] = $enabled;
 
 		return $this;
 	}
