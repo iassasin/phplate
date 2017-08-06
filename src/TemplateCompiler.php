@@ -8,12 +8,14 @@
 namespace Iassasin\Phplate;
 
 class TemplateCompiler {
+	private $options;
 	private $lastop;
 	private $pgm;
 	private $lexer;
 	private $endesc;
 
-	public function __construct(){
+	public function __construct(TemplateOptions $options){
+		$this->options = $options;
 		$this->endesc = '';
 		$this->lastop = false;
 		$this->pgm = [];
@@ -334,6 +336,7 @@ class TemplateCompiler {
 						){
 							return true;
 						}
+
 						$this->processStatement();
 					}
 					break;
@@ -411,6 +414,12 @@ class TemplateCompiler {
 
 	private function processExpression(){
 		$arg = $this->lexer->parseExpression();
+		if (
+			$this->options->getAutoSafeEnabled()
+			&& ($arg[0] !== '|p' || !in_array($arg[2], ['safe', 'text', 'raw']))
+		){
+			$arg = ['|p', $arg, 'safe', []];
+		}
 		if (in_array($arg[0], ['=i', '+=i', '-=i', '*=i', '/=i'])){
 			$this->pgm[] = ['calc', $arg];
 		} else {
