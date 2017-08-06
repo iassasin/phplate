@@ -329,6 +329,15 @@ class TemplateCompiler {
 				default:
 					if ($this->endesc == '}}'){
 						$this->processExpression();
+						$arg = end($this->pgm)[1];
+						if (
+							$this->options->getAutoSafeEnabled()
+							&& ($arg[0] !== '|p' || !in_array($arg[2], ['safe', 'text', 'raw']))
+						){
+							// заэкранируем вывод, для этого вложим весь вывод в пайп-функцию экранирования
+							$arg = ['|p', $arg, 'safe', []];
+							$this->pgm[key($this->pgm)][1] = $arg;
+						}
 					} else {
 						if (
 							$this->lexer->toktype == TemplateLexer::TOK_ID
@@ -414,12 +423,6 @@ class TemplateCompiler {
 
 	private function processExpression(){
 		$arg = $this->lexer->parseExpression();
-		if (
-			$this->options->getAutoSafeEnabled()
-			&& ($arg[0] !== '|p' || !in_array($arg[2], ['safe', 'text', 'raw']))
-		){
-			$arg = ['|p', $arg, 'safe', []];
-		}
 		if (in_array($arg[0], ['=i', '+=i', '-=i', '*=i', '/=i'])){
 			$this->pgm[] = ['calc', $arg];
 		} else {
