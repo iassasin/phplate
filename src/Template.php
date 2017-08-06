@@ -67,6 +67,15 @@ class Template {
 
 		return $p->getResult();
 	}
+	
+	public static function build_str($tplstr, array $values){
+		$c = new TemplateCompiler();
+		$c->compile($tplstr);
+		$p = new Template($c->getProgram());
+		$p->run($values);
+
+		return $p->getResult();
+	}
 
 	private static function compile($tplname){
 		$tpath = self::$TPL_PATH . $tplname . '.html';
@@ -645,14 +654,5 @@ class Template {
 
 	public function getResult(){
 		return $this->res;
-	}
-
-	public static function build_str($tplstr, array $values){
-		$c = new TemplateCompiler();
-		$c->compile($tplstr);
-		$p = new Template($c->getProgram());
-		$p->run($values);
-
-		return $p->getResult();
 	}
 }
