@@ -192,7 +192,6 @@ class TemplateLexer {
 				if ($op == '#'){ //block
 					if (!$this->nextToken() || $this->toktype != self::TOK_ID){
 						$this->error('Block name excepted');
-
 						return null;
 					}
 
@@ -208,7 +207,6 @@ class TemplateLexer {
 
 							if ($this->toktype != self::TOK_OP || $this->token != ')'){
 								$this->error('Excepted ")"');
-
 								return null;
 							}
 
@@ -222,7 +220,6 @@ class TemplateLexer {
 				} else if ($op == '('){
 					if (!$this->nextToken()){
 						$this->error('Argument excepted in "("');
-
 						return null;
 					}
 
@@ -230,13 +227,14 @@ class TemplateLexer {
 
 					if ($this->toktype != self::TOK_OP || $this->token != ')'){
 						$this->error('Excepted ")"');
-
 						return null;
 					}
 
 					$this->nextToken();
 
 					return $this->postfix($lvl, $val);
+				} else if ($op == '['){
+					return $this->parseInlineArray($lvl);
 				} else if ($op == '$'){
 					$gvname = null;
 
@@ -313,6 +311,34 @@ class TemplateLexer {
 		}
 
 		return null;
+	}
+
+	public function parseInlineArray($lvl){
+		if (!$this->nextToken()){
+			$this->error('Expression or "]" excepted after "["');
+			return null;
+		}
+
+		$vals = [];
+		if (!$this->isToken(self::TOK_OP, ']')){
+			$vals[] = $this->infix(1);
+			while ($this->isToken(self::TOK_OP, ',')){
+				$this->nextToken();
+				if ($this->isToken(self::TOK_OP, ']')) // when trailing comma
+					break;
+
+				$vals[] = $this->infix(1);
+			}
+		}
+
+		if (!$this->isToken(self::TOK_OP, ']')){
+			$this->error('Excepted "]" for inline array');
+			return null;
+		}
+
+		$this->nextToken();
+
+		return $this->postfix($lvl, ['[e', $vals]);
 	}
 
 	public function nextToken(){

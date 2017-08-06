@@ -67,7 +67,7 @@ class Template {
 
 		return $p->getResult();
 	}
-	
+
 	public static function build_str($tplstr, array $values){
 		$c = new TemplateCompiler();
 		$c->compile($tplstr);
@@ -270,6 +270,7 @@ class Template {
 	 * ['g', $gvarname]
 	 *
 	 * [$op, $args...]
+	 * ['[e', [$el1, $el2, ...]]
 	 * ['|p', $val, $fname, [$arg1, $arg2, ...]]
 	 * ['[p', $val, $key]
 	 * ['(p', $func, [$arg1, $arg2, ...]]
@@ -306,6 +307,14 @@ class Template {
 				}
 
 				return false;
+
+			case '[e':
+				$vals = [];
+				foreach ($op[1] as $key => $val){
+					$vals[$key] = $this->readValue($val);
+				}
+
+				return $vals;
 
 			case '(p':
 				$f = $this->readValue($op[1]);
