@@ -65,7 +65,6 @@ class TemplateLexer {
 				'|' => function (TemplateLexer $parser, $val, $lvl){
 					if (!$parser->nextToken() || $parser->toktype != self::TOK_ID){
 						$parser->error('Function name excepted in "|"');
-
 						return null;
 					}
 
@@ -80,8 +79,7 @@ class TemplateLexer {
 							} while ($parser->toktype == self::TOK_OP && $parser->token == ',');
 
 							if ($parser->toktype != self::TOK_OP || $parser->token != ')'){
-								$parser->error('Excepted ")" in "|"');
-
+								$parser->error('Excepted ")" in pipe-function call');
 								return null;
 							}
 
@@ -95,7 +93,6 @@ class TemplateLexer {
 				'[' => function (TemplateLexer $parser, $val, $lvl){
 					if (!$parser->nextToken()){
 						$parser->error('Argument excepted in "["');
-
 						return null;
 					}
 
@@ -103,7 +100,6 @@ class TemplateLexer {
 
 					if ($parser->toktype != self::TOK_OP || $parser->token != ']'){
 						$parser->error('Excepted "]"');
-
 						return null;
 					}
 
@@ -119,15 +115,14 @@ class TemplateLexer {
 					if (!$parser->isToken(self::TOK_OP, ')')){
 						$args[] = $parser->infix(1);
 						while ($parser->isToken(self::TOK_OP, ',')){
-							$args[] = $parser->infix(1);
 							$parser->nextToken();
+							$args[] = $parser->infix(1);
 						}
+					}
 
-						if (!$parser->isToken(self::TOK_OP, ')')){
-							$parser->error('Excepted ")" in function call');
-
-							return null;
-						}
+					if (!$parser->isToken(self::TOK_OP, ')')){
+						$parser->error('Excepted ")" in function call');
+						return null;
 					}
 
 					$parser->nextToken();

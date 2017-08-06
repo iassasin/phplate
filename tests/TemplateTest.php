@@ -62,4 +62,21 @@ class TemplateTest extends PHPUnit_Framework_TestCase
 		$this->assertEquals(4, $result[$i++]); // тест работы пользовательской функции my_pow
 		$this->assertEquals(16, $i); // сколько тестов должно быть выполнено
 	}
+
+	public function testFunctionCall(){
+		$res = Template::build_str('{{ f() }}', ['f' => function(){
+			return "no args";
+		}]);
+		$this->assertEquals($res, 'no args');
+
+		$res = Template::build_str('{{ f(1) }}', ['f' => function($a){
+			return "$a";
+		}]);
+		$this->assertEquals($res, '1');
+
+		$res = Template::build_str('{{ f(1, "a", 3.2) }}', ['f' => function($a, $b, $c){
+			return "$a $b $c";
+		}]);
+		$this->assertEquals($res, '1 a 3.2');
+	}
 }
