@@ -5,6 +5,8 @@
  * Use for good
  */
 
+namespace Iassasin\Phplate\Tests;
+
 use Iassasin\Phplate\TemplateEngine;
 use PHPUnit\Framework\TestCase;
 use Iassasin\Phplate\TemplateOptions;
@@ -16,6 +18,7 @@ use Iassasin\Phplate\TemplateOptions;
  * @covers \Iassasin\Phplate\TemplateCompiler
  * @covers \Iassasin\Phplate\TemplateLexer
  * @covers \Iassasin\Phplate\TemplateOptions
+ * @covers \Iassasin\Phplate\DelayedProgram
  */
 class TemplateTest extends TestCase {
 	public static function setUpBeforeClass(){

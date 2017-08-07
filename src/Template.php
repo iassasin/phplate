@@ -91,7 +91,7 @@ class Template {
 						$arg = [$arg];
 					}
 
-					$p = self::compile($ins[1]);
+					$p = TemplateEngine::instance()->compile($ins[1]);
 					if (is_string($p)){
 						$this->res .= $p;
 					} else{

@@ -82,7 +82,7 @@ class TemplateEngine {
 		return $p->getResult();
 	}
 
-	private function compile($tplName){
+	public function compile($tplName){
 		$tpath = $this->tplPath . $tplName . '.html';
 		$tcpath = $this->tplPath . $tplName . '.ctpl';
 
