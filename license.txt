@@ -1,5 +1,5 @@
 Project: phplate
-Author: Assasin (assasin@sinair.ru)
+Author: Assasin (iassasin@yandex.ru)
 License: Beerware
 
 Use for good :)
