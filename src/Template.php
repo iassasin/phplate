@@ -8,6 +8,8 @@
 namespace Iassasin\Phplate;
 
 class Template {
+	const AUTOSAFE_IGNORE = ['safe', 'text', 'raw', 'url'];
+
 	public static $TPL_PATH = './';
 
 	private static $TPL_CACHE = [];

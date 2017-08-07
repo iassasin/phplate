@@ -332,7 +332,7 @@ class TemplateCompiler {
 						$arg = end($this->pgm)[1];
 						if (
 							$this->options->getAutoSafeEnabled()
-							&& ($arg[0] !== '|p' || !in_array($arg[2], ['safe', 'text', 'raw']))
+							&& ($arg[0] !== '|p' || !in_array($arg[2], Template::AUTOSAFE_IGNORE))
 						){
 							// заэкранируем вывод, для этого вложим весь вывод в пайп-функцию экранирования
 							$arg = ['|p', $arg, 'safe', []];
