@@ -1,6 +1,6 @@
 # Phplate
-[![Build Status](https://travis-ci.org/iassasin/phplate.svg?branch=master)](https://travis-ci.org/iassasin/phplate)
-[![Coverage Status](https://coveralls.io/repos/github/iassasin/phplate/badge.svg?branch=master)](https://coveralls.io/github/iassasin/phplate?branch=master)
+[![Build Status](https://travis-ci.org/iassasin/phplate.svg?branch=dev)](https://travis-ci.org/iassasin/phplate)
+[![Coverage Status](https://coveralls.io/repos/github/iassasin/phplate/badge.svg?branch=dev)](https://coveralls.io/github/iassasin/phplate?branch=dev)
 
 Phplate - это легковесный и функциональный препроцессор шаблонов, написанный на php и не требующий никаких зависимостей.
 
