@@ -5,7 +5,7 @@
 ---
 
 ```php
-public static function Template::init($tplpath, $cache_enabled = true)
+public static function TemplateEngine::init($tplpath, $cache_enabled = true)
 ```
 
  Инициализирует шаблонизатор, задает каталог, хранящий шаблоны (файлы .html)  
@@ -17,7 +17,7 @@ public static function Template::init($tplpath, $cache_enabled = true)
 ---
 
 ```php
-public static function Template::addUserFunctionHandler($f)
+public function TemplateEngine::addUserFunctionHandler($f)
 ```
 
 Назначает пользовательский обработчик пайп-функций
@@ -30,7 +30,7 @@ public static function Template::addUserFunctionHandler($f)
 ---
 
 ```php
-public static function Template::addGlobalVar($name, $val)
+public static function TemplateEngine::addGlobalVar($name, $val)
 ```
 
 Добавляет новый глобальный аргумент (глобальную переменную)
@@ -42,7 +42,7 @@ public static function Template::addGlobalVar($name, $val)
 ---
 
 ```php
-public static function Template::build($tplname, $values)
+public static function TemplateEngine::build($tplname, $values)
 ```
 
 Выполняет подстановку в аргументов в шаблон из указанного файла
@@ -54,7 +54,7 @@ public static function Template::build($tplname, $values)
 ---
 
 ```php
-public static function Template::build_str($tplstr, $values)
+public static function TemplateEngine::build_str($tplstr, $values)
 ```
 
 Выполняет подстановку в аргументов в шаблон, переданный функции напрямую

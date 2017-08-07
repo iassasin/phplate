@@ -15,5 +15,5 @@ $options = (new TemplateOptions())
 Для того, чтобы настроить шаблонизатор используя новые опции, небходимо передать объект `TemplateOptions` в статический метод `init()`:
 
 ```php
-Template::init('/path/to/templates/', true, $options);
+TemplateEngine::init('/path/to/templates/', true, $options);
 ```
