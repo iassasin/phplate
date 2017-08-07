@@ -489,6 +489,8 @@ class Template {
 		}
 
 		switch ($func){
+			case 'raw':
+				break; // :D
 			case 'safe':
 				$v = htmlspecialchars($v);
 				break;

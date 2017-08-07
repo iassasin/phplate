@@ -18,9 +18,10 @@ use Iassasin\Phplate\TemplateOptions;
 class TemplateTest extends TestCase
 {
 	public function setUp(){
-		Template::init(__DIR__ . '/resources/', (new TemplateOptions())
-			->setCacheEnabled(false)
-			->setAutoSafeEnabled(false)
+		Template::init(
+			__DIR__ . '/resources/',
+			(new TemplateOptions())
+				->setCacheEnabled(false)
 		);
 	}
 
@@ -67,17 +68,17 @@ class TemplateTest extends TestCase
 	}
 
 	public function testFunctionCall(){
-		$res = Template::build_str('{{ f() }}', ['f' => function(){
+		$res = Template::build_str('{{ f() }}', ['f' => function (){
 			return "no args";
 		}]);
 		$this->assertEquals('no args', $res);
 
-		$res = Template::build_str('{{ f(1) }}', ['f' => function($a){
+		$res = Template::build_str('{{ f(1) }}', ['f' => function ($a){
 			return "$a";
 		}]);
 		$this->assertEquals('1', $res);
 
-		$res = Template::build_str('{{ f(1, "a", 3.2) }}', ['f' => function($a, $b, $c){
+		$res = Template::build_str('{{ f(1, "a", 3.2) }}', ['f' => function ($a, $b, $c){
 			return "$a $b $c";
 		}]);
 		$this->assertEquals('1 a 3.2', $res);
