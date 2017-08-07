@@ -5,6 +5,7 @@
  * Use for good
  */
 
+use PHPUnit\Framework\TestCase;
 use Iassasin\Phplate\Template;
 use Iassasin\Phplate\TemplateOptions;
 
@@ -12,8 +13,9 @@ use Iassasin\Phplate\TemplateOptions;
  * @covers \Iassasin\Phplate\Template
  * @covers \Iassasin\Phplate\TemplateCompiler
  * @covers \Iassasin\Phplate\TemplateLexer
+ * @covers \Iassasin\Phplate\TemplateOptions
  */
-class TemplateTest extends PHPUnit_Framework_TestCase
+class TemplateTest extends TestCase
 {
 	public static function setUpBeforeClass(){
 		Template::init(__DIR__ . '/resources/', (new TemplateOptions())
