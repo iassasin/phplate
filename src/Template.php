@@ -8,10 +8,7 @@
 namespace Iassasin\Phplate;
 
 class Template {
-	public static $TPL_PATH = './';
 
-	private static $TPL_CACHE = [];
-	private static $USER_FUNCS = [];
 	private static $GLOB_VARS = [];
 	/**
 	 * @var TemplateOptions|null
@@ -26,98 +23,13 @@ class Template {
 	private $blocks;
 	private $widgets;
 
-	private function __construct($pgm){
+	public function __construct($pgm){
 		$this->pgm = $pgm;
 		$this->values = [];
 		$this->res = '';
 		$this->includes = [];
 		$this->blocks = [];
 		$this->widgets = [];
-	}
-
-	public static function init($tplpath, TemplateOptions $options = null){
-		self::$TPL_PATH = $tplpath;
-		self::$OPTIONS = $options ?: new TemplateOptions();
-	}
-
-	public static function addUserFunctionHandler($name, $f){
-		if (isset(self::$USER_FUNCS[$name])) {
-			throw new \RuntimeException("Функция с именем \"{$name}\" уже была добавлена.");
-		}
-		if (is_callable($f)){
-			self::$USER_FUNCS[$name] = $f;
-		}
-	}
-
-	public static function addGlobalVar($name, $val){
-		self::$GLOB_VARS[$name] = $val;
-	}
-
-	/**
-	 * Вставляет в шаблон $tplname переменные из массива $values
-	 * $tplname - имя шаблона
-	 * $values - ассоциативный массив параметров вида ['arg' => 'val'] любой вложенности.
-	 */
-	public static function build($tplname, array $values){
-		$p = self::compile($tplname);
-		if (is_string($p)){
-			return $p;
-		}
-		$p->run($values);
-
-		return $p->getResult();
-	}
-
-	public static function build_str($tplstr, array $values){
-		$c = new TemplateCompiler();
-		$c->compile($tplstr);
-		$p = new Template($c->getProgram());
-		$p->run($values);
-
-		return $p->getResult();
-	}
-
-	private static function compile($tplname){
-		$tpath = self::$TPL_PATH . $tplname . '.html';
-		$tcpath = self::$TPL_PATH . $tplname . '.ctpl';
-
-		if (self::$OPTIONS->getCacheEnabled() && file_exists($tcpath)){
-			if (!file_exists($tpath) || filemtime($tcpath) >= filemtime($tpath)){
-				$pgm = json_decode(file_get_contents($tcpath), true);
-				if ($pgm !== false){
-					$p = new Template($pgm);
-					self::$TPL_CACHE[$tpath] = $p;
-
-					return $p;
-				}
-			}
-		}
-
-		if (file_exists($tpath)){
-			try {
-				$p = null;
-				if (array_key_exists($tpath, self::$TPL_CACHE)){
-					$p = self::$TPL_CACHE[$tpath];
-				} else {
-					$c = new TemplateCompiler();
-					$c->compile(file_get_contents($tpath));
-
-					$pgm = $c->getProgram();
-					if (self::$OPTIONS->getCacheEnabled()){
-						file_put_contents($tcpath, json_encode($pgm));
-					}
-
-					$p = new Template($pgm);
-					self::$TPL_CACHE[$tpath] = $p;
-				}
-
-				return $p;
-			} catch (\Exception $e){
-				return 'Error: ' . $tplname . '.html, ' . $e->getMessage();
-			}
-		}
-
-		return 'Error: template "' . $tplname . '" not found';
 	}
 
 	public function run($values){
@@ -151,7 +63,7 @@ class Template {
 				case 'if':
 					if ($this->readValue($ins[1])){
 						$this->execPgm($ins[2]);
-					} else {
+					} else{
 						$this->execPgm($ins[3]);
 					}
 					break;
@@ -171,7 +83,7 @@ class Template {
 						}
 					} else if ($ins[3] !== null){
 						$arg = $this->readValue($ins[3]);
-					} else {
+					} else{
 						$arg = $this->values;
 					}
 
@@ -182,7 +94,7 @@ class Template {
 					$p = self::compile($ins[1]);
 					if (is_string($p)){
 						$this->res .= $p;
-					} else {
+					} else{
 						$oldvals = $this->values;
 						$this->values = $arg;
 						$this->includes[] = $ins[1];
@@ -241,13 +153,18 @@ class Template {
 
 						$this->values = $oldvals;
 						$this->widgets = $oldwidgets;
-					} else {
+					} else{
 						$this->res .= 'Error: widget ' . $ins[1] . ' not found';
 					}
 					break;
 			}
 		}
 	}
+
+	public function getResult(){
+		return $this->res;
+	}
+
 
 	/**
 	 * Program arrays:
@@ -286,9 +203,10 @@ class Template {
 				return array_key_exists($op[1], $this->values) ? $this->values[$op[1]] : false;
 
 			case 'g':
-				if ($op[1] === null) return self::$GLOB_VARS;
+				$globalVars = TemplateEngine::instance()->globalVars;
+				if ($op[1] === null) $globalVars;
 
-				return array_key_exists($op[1], self::$GLOB_VARS) ? self::$GLOB_VARS[$op[1]] : false;
+				return array_key_exists($op[1], $globalVars) ? $globalVars[$op[1]] : false;
 
 			case '[p':
 				$v = $this->readValue($op[1]);
@@ -349,7 +267,7 @@ class Template {
 						$this->values = $nvals;
 						$this->execPgm($this->blocks[$op[1]]);
 						$this->values = $oldvals;
-					} else {
+					} else{
 						$this->execPgm($this->blocks[$op[1]]);
 					}
 					$v = $this->res;
@@ -370,10 +288,10 @@ class Template {
 						$v1 = $this->values;
 					} else if (array_key_exists($op[1][1], $this->values)){
 						$v1 = $this->values[$op[1][1]];
-					} else {
+					} else{
 						$v1 = false;
 					}
-				} else {
+				} else{
 					$v1 = $this->readValue($op[1]);
 				}
 
@@ -447,7 +365,7 @@ class Template {
 			case '-=i':
 			case '*=i':
 			case '/=i':
-				try {
+				try{
 					$v1 =& $this->readValueReference($op[1]);
 				} catch (\Exception $e){
 					return false;
@@ -486,116 +404,7 @@ class Template {
 		for ($i = 0; $i < $facnt; ++$i){
 			$fargs[$i] = $this->readValue($fargs[$i]);
 		}
-
-		switch ($func){
-			case 'safe':
-				$v = htmlspecialchars($v);
-				break;
-			case 'text':
-				$v = str_replace(
-					["\n", '  ', "\t"],
-					["\n<br>", '&nbsp;&nbsp;', '&nbsp;&nbsp;&nbsp;&nbsp;'],
-					htmlspecialchars($v)
-				);
-				break;
-
-			case 'lowercase':
-				$v = mb_strtolower($v, 'utf-8');
-				break;
-			case 'uppercase':
-				$v = mb_strtoupper($v, 'utf-8');
-				break;
-
-			case 'url':
-				$v = htmlspecialchars($v);
-				break;
-			case 'urlparam':
-				$v = rawurlencode($v);
-				break;
-
-			case 'json':
-				$v = json_encode($v);
-				break;
-
-			case 'count':
-				$v = count($v);
-				break;
-
-			case 'isarray':
-				$v = is_array($v);
-				break;
-			case 'keys':
-				$v = array_keys($v);
-				break;
-
-			case 'join':
-				if ($facnt >= 1){
-					$v = join($fargs[0], $v);
-				}
-				break;
-
-			case 'split':
-				if ($facnt >= 1){
-					$v = explode($fargs[0], $v);
-				}
-				break;
-
-			case 'substr':
-				if ($facnt >= 1){
-					if ($facnt >= 2){
-						$v = substr($v, $fargs[0], $fargs[1]);
-					} else {
-						$v = substr($v, $fargs[0]);
-					}
-				}
-				break;
-
-			case 'slice':
-				if ($facnt >= 1){
-					if ($facnt >= 2){
-						$v = array_slice($v, $fargs[0], $fargs[1]);
-					} else {
-						$v = array_slice($v, $fargs[0]);
-					}
-				}
-				break;
-
-			case 'replace':
-				if ($facnt >= 2){
-					$v = str_replace($fargs[0], $fargs[1], $v);
-				}
-				break;
-
-			case 'date':
-				if ($facnt >= 1){
-					$format = $fargs[0];
-				} else {
-					$format = self::$OPTIONS->getDateFormat();
-				}
-				$oldVal = $v;
-				if ($v instanceof \DateTimeInterface){
-					$v = $v->format($format);
-					// выходим, чтобы сразу вернуть результат - $v
-					break;
-				}
-				if (!is_numeric($v)){
-					$v = strtotime($v);
-				}
-				$v = date($format, $v);
-
-				if (false === $v){
-					throw new \RuntimeException('Некорректное значение даты-времени: ' . $oldVal);
-				}
-				break;
-
-			default:
-				if (isset(self::$USER_FUNCS[$func])) {
-					$v = self::$USER_FUNCS[$func]($v, $fargs);
-				}
-				break;
-		}
-
-		return $v;
+		return TemplateEngine::instance()->getUserFunctions()->eval($func, $v, $fargs);
 	}
 
 	private function &readValueReference($op){
@@ -609,12 +418,13 @@ class Template {
 				return $this->values[$op[1]];
 
 			case 'g':
+				$globalVars = TemplateEngine::instance()->globalVars;
 				if ($op[1] === null)
-					return self::$GLOB_VARS;
-				if (!array_key_exists($op[1], self::$GLOB_VARS))
-					self::$GLOB_VARS[$op[1]] = false;
+					return $globalVars;
+				if (!array_key_exists($op[1], $globalVars))
+					TemplateEngine::instance()->globalVars[$op[1]] = false;
 
-				return self::$GLOB_VARS[$op[1]];
+				return $globalVars[$op[1]];
 
 			case '[p':
 				$v =& $this->readValueReference($op[1]);
@@ -637,10 +447,10 @@ class Template {
 						$v1 =& $this->values;
 					} else if (array_key_exists($op[1][1], $this->values)){
 						$v1 =& $this->values[$op[1][1]];
-					} else {
+					} else{
 						throw new \Exception();
 					}
-				} else {
+				} else{
 					$v1 =& $this->readValueReference($op[1]);
 				}
 
@@ -659,9 +469,5 @@ class Template {
 		}
 
 		throw new \Exception();
-	}
-
-	public function getResult(){
-		return $this->res;
 	}
 }
