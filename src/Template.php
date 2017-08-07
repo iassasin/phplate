@@ -580,12 +580,8 @@ class Template {
 				break;
 
 			default:
-				var_dump('BEFORE CALL USER FUNC: ' . $func);
 				if (isset(self::$USER_FUNCS[$func])) {
-					var_dump('CALL USER FUNC: ' . $func);
-					$f = self::$USER_FUNCS[$func];
-					$v = $f($v, $fargs);
-					var_dump('AFTER CALL USER FUNC: ' . $func);
+					$v = self::$USER_FUNCS[$func]($v, $fargs);
 				}
 				break;
 		}
