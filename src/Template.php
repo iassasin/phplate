@@ -590,7 +590,8 @@ class Template {
 
 			default:
 				if (isset(self::$USER_FUNCS[$func])) {
-					$v = self::$USER_FUNCS[$func]($v, $fargs);
+					$f = self::$USER_FUNCS[$func];
+					$v = $f($v, $fargs);
 				}
 				break;
 		}
