@@ -43,8 +43,8 @@ class Template {
 	 * @param array $values - ассоциативный массив параметров вида ['arg' => 'val'] любой вложенности.
 	 * @return string
 	 */
-	public static function build_str($tplStr, array $values): string{
-		return TemplateEngine::instance()->build_str($tplStr, $values);
+	public static function buildStr($tplStr, array $values): string{
+		return TemplateEngine::instance()->buildStr($tplStr, $values);
 	}
 
 	public function __construct($pgm){

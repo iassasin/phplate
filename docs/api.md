@@ -54,7 +54,7 @@ public static function Template::build($tplname, $values)
 ---
 
 ```php
-public static function Template::build_str($tplstr, $values)
+public static function Template::buildStr($tplstr, $values)
 ```
 
 Выполняет подстановку в аргументов в шаблон, переданный функции напрямую

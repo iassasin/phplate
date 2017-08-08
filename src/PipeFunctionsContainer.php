@@ -13,7 +13,8 @@ class PipeFunctionsContainer {
 
 	private $functions = [];
 
-	public function __construct(){
+	public function __construct(TemplateOptions $options){
+		$this->options = $options;
 		$methods = (new \ReflectionClass(static::class))->getMethods();
 		foreach ($methods as $method){
 			$methodName = $method->getShortName();
@@ -36,6 +37,10 @@ class PipeFunctionsContainer {
 			throw new \RuntimeException('Unknown pipe function "' . $name . '".');
 		}
 		return call_user_func_array($this->functions[$name], array_merge([$value], $args));
+	}
+
+	public function evalRaw($arg){
+		return $arg;
 	}
 
 	public function evalSafe($arg): string{
@@ -94,7 +99,7 @@ class PipeFunctionsContainer {
 		$count = count($params);
 		if ($count >= 2){
 			return substr($arg, $params[0], $params[1]);
-		} elseif ($count === 1){
+		} elseif ($count === 1) {
 			return substr($arg, $params[0]);
 		}
 		throw new \InvalidArgumentException('Invalid parameters count.');
@@ -104,7 +109,7 @@ class PipeFunctionsContainer {
 		$count = count($params);
 		if ($count >= 2){
 			return array_slice($arg, $params[0], $params[1]);
-		} elseif ($count === 1){
+		} elseif ($count === 1) {
 			return array_slice($arg, $params[0]);
 		}
 		throw new \InvalidArgumentException('Invalid parameters count.');
@@ -120,8 +125,8 @@ class PipeFunctionsContainer {
 	public function evalDate($arg, ...$params): string{
 		if (count($params) >= 1){
 			$format = $params[0];
-		} else{
-			$format = TemplateEngine::instance()->getOptions()->getDateFormat();
+		} else {
+			$format = $this->options->getDateFormat();
 		}
 		$oldVal = $arg;
 		if ($arg instanceof \DateTimeInterface){

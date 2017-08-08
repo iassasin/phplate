@@ -18,25 +18,25 @@ class TemplateEngine {
 	private $userFunctions;
 	private $tplCache = [];
 
-	public static function instance(): self{
+	public static function instance(): self {
 		return self::$instance ?? self::$instance = new self('./', new TemplateOptions());
 	}
 
-	public static function init($tplPath, TemplateOptions $options = null){
+	public static function init($tplPath, TemplateOptions $options = null) {
 		return self::$instance = new self($tplPath, $options ?: new TemplateOptions());
 	}
 
 	private function __construct(string $tplPath, TemplateOptions $options){
 		$this->tplPath = $tplPath;
 		$this->options = $options;
-		$this->userFunctions = new PipeFunctionsContainer();
+		$this->userFunctions = new PipeFunctionsContainer($options);
 	}
 
-	public function getOptions(): TemplateOptions{
+	public function getOptions(): TemplateOptions {
 		return $this->options;
 	}
 
-	public function getUserFunctions(): PipeFunctionsContainer{
+	public function getUserFunctions(): PipeFunctionsContainer {
 		return $this->userFunctions;
 	}
 
@@ -57,7 +57,7 @@ class TemplateEngine {
 	 * @param array $values - ассоциативный массив параметров вида ['arg' => 'val'] любой вложенности.
 	 * @return string
 	 */
-	public function build($tplName, array $values): string{
+	public function build($tplName, array $values): string {
 		$p = self::instance()->compile($tplName);
 		if (is_string($p)){
 			return $p;
@@ -73,7 +73,7 @@ class TemplateEngine {
 	 * @param array $values - ассоциативный массив параметров вида ['arg' => 'val'] любой вложенности.
 	 * @return string
 	 */
-	public function build_str($tplStr, array $values): string{
+	public function buildStr($tplStr, array $values): string {
 		$c = new TemplateCompiler();
 		$c->compile($tplStr);
 		$p = new Template($c->getProgram());
@@ -103,7 +103,7 @@ class TemplateEngine {
 				$p = null;
 				if (array_key_exists($tpath, $this->tplCache)){
 					$p = $this->tplCache[$tpath];
-				} else{
+				} else {
 					$c = new TemplateCompiler();
 					$c->compile(file_get_contents($tpath));
 
