@@ -64,10 +64,10 @@
 
 ```php
 
-TemplateEngine::instance()->addUserFunctionHandler('json_pretty', function ($variable, $args = []) {
+Template::addUserFunctionHandler('json_pretty', function ($variable, $args = []) {
     return nl2br(str_replace(' ', '&nbsp;', json_encode($variable, JSON_PRETTY_PRINT)));
 });
-echo TemplateEngine::build('template', ['arr' => ['Object' => ['Field1' => 1, 'Field2' => null]]]);
+echo Template::build('template', ['arr' => ['Object' => ['Field1' => 1, 'Field2' => null]]]);
 
 ```
 Вывод шаблона `{{ arr|json_pretty }}` с использованием кастомной функции будет следующим: 

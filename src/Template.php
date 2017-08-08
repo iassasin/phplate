@@ -23,6 +23,30 @@ class Template {
 	private $blocks;
 	private $widgets;
 
+	public static function init($tplPath, TemplateOptions $options = null){
+		return TemplateEngine::init($tplPath, $options ?: new TemplateOptions());
+	}
+
+	/**
+	 * Вставляет в шаблон $tplName переменные из массива $values
+	 * @param string $tplName - имя шаблона
+	 * @param array $values - ассоциативный массив параметров вида ['arg' => 'val'] любой вложенности.
+	 * @return string
+	 */
+	public static function build($tplName, array $values): string{
+		return TemplateEngine::instance()->build($tplName, $values);
+	}
+
+	/**
+	 * Вставляет в шаблон $tplStr переменные из массива $values
+	 * @param string $tplStr - код шаблона
+	 * @param array $values - ассоциативный массив параметров вида ['arg' => 'val'] любой вложенности.
+	 * @return string
+	 */
+	public static function build_str($tplStr, array $values): string{
+		return TemplateEngine::instance()->build_str($tplStr, $values);
+	}
+
 	public function __construct($pgm){
 		$this->pgm = $pgm;
 		$this->values = [];
@@ -418,11 +442,13 @@ class Template {
 				return $this->values[$op[1]];
 
 			case 'g':
-				$globalVars = TemplateEngine::instance()->globalVars;
-				if ($op[1] === null)
+				$globalVars = &TemplateEngine::instance()->globalVars;
+				if ($op[1] === null){
 					return $globalVars;
-				if (!array_key_exists($op[1], $globalVars))
-					TemplateEngine::instance()->globalVars[$op[1]] = false;
+				}
+				if (!array_key_exists($op[1], $globalVars)){
+					$globalVars[$op[1]] = false;
+				}
 
 				return $globalVars[$op[1]];
 

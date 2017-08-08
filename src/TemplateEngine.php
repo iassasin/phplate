@@ -57,7 +57,7 @@ class TemplateEngine {
 	 * @param array $values - ассоциативный массив параметров вида ['arg' => 'val'] любой вложенности.
 	 * @return string
 	 */
-	public static function build($tplName, array $values): string{
+	public function build($tplName, array $values): string{
 		$p = self::instance()->compile($tplName);
 		if (is_string($p)){
 			return $p;
@@ -73,7 +73,7 @@ class TemplateEngine {
 	 * @param array $values - ассоциативный массив параметров вида ['arg' => 'val'] любой вложенности.
 	 * @return string
 	 */
-	public static function build_str($tplStr, array $values): string{
+	public function build_str($tplStr, array $values): string{
 		$c = new TemplateCompiler();
 		$c->compile($tplStr);
 		$p = new Template($c->getProgram());

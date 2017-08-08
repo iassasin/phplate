@@ -10,15 +10,15 @@ Phplate - это легковесный и функциональный преп
 
 ```php
 require_once 'vendor/autoload.php';
-use Iassasin\Phplate\TemplateEngine;
+use Iassasin\Phplate\Template;
 
 // Настройка пути к каталогу с шаблонами
-TemplateEngine::init($_SERVER['DOCUMENT_ROOT'].'/resources/templates/');
+Template::init($_SERVER['DOCUMENT_ROOT'].'/resources/templates/');
 ```
 
 Полный список настроек вы можете найти в [документации](docs/api.md).
 
-Используя статический метод `TemplateEngine::build`, производится подстановка аргументов шаблона в шаблон. Результатом является строка, которую можно отдать клиенту.  
+Используя статический метод `Template::build`, производится подстановка аргументов шаблона в шаблон. Результатом является строка, которую можно отдать клиенту.  
 Аргументы передаются шаблону с помощью массива любого уровня вложенности.
 
 Конечно же, возможности phplate не ограничиваются только подстановкой переменных в указанные места, но также есть возможность условного вывода ([if](docs/constructions/if.md)), написания циклов ([for](docs/constructions/for.md)), вычисления выражений перед выводом (в частности, препроцессинг параметров с помощью [пайп-функций](docs/pipe-functions.md)), вынос повторяющегося кода в [виджеты](docs/constructions/widget.md) и другие возможности.
@@ -37,7 +37,7 @@ TemplateEngine::init($_SERVER['DOCUMENT_ROOT'].'/resources/templates/');
 ```php
 require_once 'phplate_config.php'; // созданный нами выше файл конфига
 
-echo TemplateEngine::build('order', [
+echo Template::build('order', [
 	'name' => 'Петя',
 	'order' => [
 		'id' => 489,

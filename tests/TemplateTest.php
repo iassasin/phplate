@@ -29,12 +29,12 @@ class TemplateTest extends TestCase {
 
 	public function testBuild(){
 		$msg = 'Hello World!';
-		$this->assertEquals($msg, TemplateEngine::build('template_test', ['message' => $msg]));
+		$this->assertEquals($msg, TemplateEngine::instance()->build('template_test', ['message' => $msg]));
 	}
 
 	public function testBuildStr(){
 		$msg = 'Hello world!';
-		$this->assertEquals($msg, TemplateEngine::build_str(
+		$this->assertEquals($msg, TemplateEngine::instance()->build_str(
 			file_get_contents(__DIR__ . '/resources/template_test.html'),
 			['message' => $msg]
 		));
@@ -44,7 +44,7 @@ class TemplateTest extends TestCase {
 		TemplateEngine::instance()->addUserFunctionHandler('my_pow', function ($v, ...$args){
 			return pow($v, $args[0]);
 		});
-		$result = explode('|', TemplateEngine::build('pipe_test', [
+		$result = explode('|', TemplateEngine::instance()->build('pipe_test', [
 			'arr' => ['Hello' => 'world!', 1 => '2'],
 			'slices' => [1, 2, 3, 4],
 			'num' => 2,
@@ -70,40 +70,40 @@ class TemplateTest extends TestCase {
 	}
 
 	public function testFunctionCall(){
-		$res = TemplateEngine::build_str('{{ f() }}', ['f' => function (){
+		$res = TemplateEngine::instance()->build_str('{{ f() }}', ['f' => function (){
 			return "no args";
 		}]);
 		$this->assertEquals('no args', $res);
 
-		$res = TemplateEngine::build_str('{{ f(1) }}', ['f' => function ($a){
+		$res = TemplateEngine::instance()->build_str('{{ f(1) }}', ['f' => function ($a){
 			return "$a";
 		}]);
 		$this->assertEquals('1', $res);
 
-		$res = TemplateEngine::build_str('{{ f(1, "a", 3.2) }}', ['f' => function ($a, $b, $c){
+		$res = TemplateEngine::instance()->build_str('{{ f(1, "a", 3.2) }}', ['f' => function ($a, $b, $c){
 			return "$a $b $c";
 		}]);
 		$this->assertEquals('1 a 3.2', $res);
 	}
 
 	public function testInlineArrays(){
-		$res = TemplateEngine::build_str('{{ [5, "ght", 2+2, "world", ]|join("") }}', []);
+		$res = TemplateEngine::instance()->build_str('{{ [5, "ght", 2+2, "world", ]|join("") }}', []);
 		$this->assertEquals('5ght4world', $res);
 
-		$res = TemplateEngine::build_str(
+		$res = TemplateEngine::instance()->build_str(
 			'{? for i in [["Boku", "ga"], ["sabishiku"]]; i|join(" ") + " "; end ?}',
 			[]
 		);
 		$this->assertEquals('Boku ga sabishiku ', $res);
 
-		$res = TemplateEngine::build_str(
+		$res = TemplateEngine::instance()->build_str(
 			'{? arr = ["Kono" => "machi", "de" => "ikiteiru"];
 				for i in arr|keys; i; " "; arr[i]; " "; end ?}',
 			[]
 		);
 		$this->assertEquals('Kono machi de ikiteiru ', $res);
 
-		$res = TemplateEngine::build_str(
+		$res = TemplateEngine::instance()->build_str(
 			'{? arr = [5 => 10, "y", 7 => 2];
 				for i in arr|keys; i; " "; arr[i]; " "; end ?}',
 			[]
