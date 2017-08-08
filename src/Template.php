@@ -8,6 +8,9 @@
 namespace Iassasin\Phplate;
 
 class Template {
+	const AUTOSAFE_IGNORE = ['safe', 'text', 'raw', 'url'];
+
+	public static $TPL_PATH = './';
 
 	private static $GLOB_VARS = [];
 	/**
@@ -17,7 +20,6 @@ class Template {
 
 	public $pgm;
 	public $values;
-	public $options;
 	public $res;
 	private $includes;
 	private $blocks;
@@ -87,7 +89,7 @@ class Template {
 				case 'if':
 					if ($this->readValue($ins[1])){
 						$this->execPgm($ins[2]);
-					} else{
+					} else {
 						$this->execPgm($ins[3]);
 					}
 					break;
@@ -118,7 +120,7 @@ class Template {
 					$p = TemplateEngine::instance()->compile($ins[1]);
 					if (is_string($p)){
 						$this->res .= $p;
-					} else{
+					} else {
 						$oldvals = $this->values;
 						$this->values = $arg;
 						$this->includes[] = $ins[1];
@@ -177,7 +179,7 @@ class Template {
 
 						$this->values = $oldvals;
 						$this->widgets = $oldwidgets;
-					} else{
+					} else {
 						$this->res .= 'Error: widget ' . $ins[1] . ' not found';
 					}
 					break;
@@ -291,7 +293,7 @@ class Template {
 						$this->values = $nvals;
 						$this->execPgm($this->blocks[$op[1]]);
 						$this->values = $oldvals;
-					} else{
+					} else {
 						$this->execPgm($this->blocks[$op[1]]);
 					}
 					$v = $this->res;
@@ -312,10 +314,10 @@ class Template {
 						$v1 = $this->values;
 					} else if (array_key_exists($op[1][1], $this->values)){
 						$v1 = $this->values[$op[1][1]];
-					} else{
+					} else {
 						$v1 = false;
 					}
-				} else{
+				} else {
 					$v1 = $this->readValue($op[1]);
 				}
 
@@ -389,7 +391,7 @@ class Template {
 			case '-=i':
 			case '*=i':
 			case '/=i':
-				try{
+				try {
 					$v1 =& $this->readValueReference($op[1]);
 				} catch (\Exception $e){
 					return false;
@@ -473,10 +475,10 @@ class Template {
 						$v1 =& $this->values;
 					} else if (array_key_exists($op[1][1], $this->values)){
 						$v1 =& $this->values[$op[1][1]];
-					} else{
+					} else {
 						throw new \Exception();
 					}
-				} else{
+				} else {
 					$v1 =& $this->readValueReference($op[1]);
 				}
 

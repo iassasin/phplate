@@ -74,7 +74,7 @@ class TemplateEngine {
 	 * @return string
 	 */
 	public function buildStr($tplStr, array $values): string {
-		$c = new TemplateCompiler();
+		$c = new TemplateCompiler($this->options);
 		$c->compile($tplStr);
 		$p = new Template($c->getProgram());
 		$p->run($values);
@@ -104,7 +104,7 @@ class TemplateEngine {
 				if (array_key_exists($tpath, $this->tplCache)){
 					$p = $this->tplCache[$tpath];
 				} else {
-					$c = new TemplateCompiler();
+					$c = new TemplateCompiler($this->options);
 					$c->compile(file_get_contents($tpath));
 
 					$pgm = $c->getProgram();

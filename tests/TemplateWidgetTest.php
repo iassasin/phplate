@@ -8,7 +8,6 @@
 namespace Iassasin\Phplate\Tests;
 
 use Iassasin\Phplate\Template;
-use Iassasin\Phplate\TemplateEngine;
 use Iassasin\Phplate\TemplateOptions;
 use PHPUnit\Framework\TestCase;
 
