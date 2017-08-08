@@ -593,7 +593,7 @@ class Template {
 
 			default:
 				if (isset(self::$USER_FUNCS[$func])) {
-					$v = self::$USER_FUNCS[$func]($v, $fargs);
+					$v = self::$USER_FUNCS[$func]($v, $fargs); //TODO: обновить на мастере (не смержится автоматом)
 				}
 				break;
 		}

@@ -18,9 +18,7 @@ use Iassasin\Phplate\TemplateOptions;
 class TemplateTest extends TestCase
 {
 	public function setUp(){
-		Template::init(
-			__DIR__ . '/resources/',
-			(new TemplateOptions())
+		Template::init(__DIR__ . '/resources/', (new TemplateOptions())
 				->setCacheEnabled(false)
 		);
 	}
@@ -107,27 +105,5 @@ class TemplateTest extends TestCase
 			[]
 		);
 		$this->assertEquals('5 10 6 y 7 2 ', $res);
-	}
-
-	public function testAutoSafe(){
-		Template::init(__DIR__ . '/resources/', (new TemplateOptions())
-			->setCacheEnabled(false)
-		);
-		// проверяем автоэкранирование
-		$this->assertEquals('<&lt;>', Template::build_str('<{{ val }}>', ['val' => '<']));
-		// проверяем, что при применении safe, экранирование не дублируется
-		$this->assertEquals('<&lt;>', Template::build_str('<{{ val|safe }}>', ['val' => '<']));
-		// проверяем, что при применении другой пайп-функции экранирование работает
-		$this->assertEquals('<&lt;>', Template::build_str('<{{ val|lowercase }}>', ['val' => '<']));
-		// проверяем, что применении text экранирование тоже не дублируется
-		$this->assertEquals('<&lt;&nbsp;&nbsp;>', Template::build_str('<{{ val|text }}>', ['val' => '<  ']));
-		Template::init(__DIR__ . '/resources/', (new TemplateOptions())
-			->setCacheEnabled(false)
-			->setAutoSafeEnabled(false)
-		);
-		// проверяем выключенное автоэкранирование
-		$this->assertEquals('<<>', Template::build_str('<{{ val }}>', ['val' => '<']));
-		// использование принудительного экранирования
-		$this->assertEquals('<&lt;>', Template::build_str('<{{ val|safe }}>', ['val' => '<']));
 	}
 }
