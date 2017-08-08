@@ -7,6 +7,7 @@
 
 namespace Iassasin\Phplate\Tests;
 
+use Iassasin\Phplate\Template;
 use Iassasin\Phplate\TemplateEngine;
 use PHPUnit\Framework\TestCase;
 use Iassasin\Phplate\TemplateOptions;
@@ -22,7 +23,7 @@ use Iassasin\Phplate\TemplateOptions;
  */
 class TemplateTest extends TestCase {
 	public static function setUpBeforeClass(){
-		TemplateEngine::init(__DIR__ . '/resources/', (new TemplateOptions())
+		Template::init(__DIR__ . '/resources/', (new TemplateOptions())
 			->setCacheEnabled(false)
 		);
 	}

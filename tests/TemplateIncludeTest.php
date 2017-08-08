@@ -7,6 +7,7 @@
 
 namespace Iassasin\Phplate\Tests;
 
+use Iassasin\Phplate\Template;
 use Iassasin\Phplate\TemplateEngine;
 use Iassasin\Phplate\TemplateOptions;
 use PHPUnit\Framework\TestCase;
@@ -22,14 +23,14 @@ use PHPUnit\Framework\TestCase;
  */
 class TemplateIncludeTest extends TestCase {
 	public static function setUpBeforeClass(){
-		TemplateEngine::init(__DIR__ . '/resources/', (new TemplateOptions())
+		Template::init(__DIR__ . '/resources/', (new TemplateOptions())
 			->setCacheEnabled(false)
 		);
 	}
 
 	public function testInclude(){
 		$msg = 'Hello include!';
-		$res = TemplateEngine::build('template_with_include', ['data' => ['message' => $msg]]);
+		$res = Template::build('template_with_include', ['data' => ['message' => $msg]]);
 		$this->assertEquals($msg, $res);
 	}
 }
