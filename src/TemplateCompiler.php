@@ -8,12 +8,14 @@
 namespace Iassasin\Phplate;
 
 class TemplateCompiler {
+	private $options;
 	private $lastop;
 	private $pgm;
 	private $lexer;
 	private $endesc;
 
-	public function __construct(){
+	public function __construct(TemplateOptions $options){
+		$this->options = $options;
 		$this->endesc = '';
 		$this->lastop = false;
 		$this->pgm = [];
@@ -327,6 +329,15 @@ class TemplateCompiler {
 				default:
 					if ($this->endesc == '}}'){
 						$this->processExpression();
+						$arg = end($this->pgm)[1];
+						if (
+							$this->options->getAutoSafeEnabled()
+							&& ($arg[0] !== '|p' || !in_array($arg[2], Template::AUTOSAFE_IGNORE))
+						){
+							// заэкранируем вывод, для этого вложим весь вывод в пайп-функцию экранирования
+							$arg = ['|p', $arg, 'safe', []];
+							$this->pgm[key($this->pgm)][1] = $arg;
+						}
 					} else {
 						if (
 							$this->lexer->toktype == TemplateLexer::TOK_ID
@@ -334,6 +345,7 @@ class TemplateCompiler {
 						){
 							return true;
 						}
+
 						$this->processStatement();
 					}
 					break;

@@ -7,13 +7,16 @@
 
 namespace Iassasin\Phplate;
 
-class TemplateOptions
-{
+class TemplateOptions {
 	const OPTION_DATE_FORMAT = 1;
 	const OPTION_CACHE_ENABLED = 2;
 	const OPTION_AUTO_SAFE = 3;
 
-	protected $options;
+	protected $options = [];
+
+	public function __construct(){
+		$this->options[self::OPTION_AUTO_SAFE] = true; // по умолчанию опция включена
+	}
 
 	public function getDateFormat(){
 		return $this->options[self::OPTION_DATE_FORMAT] ?: 'Y-m-d H:i:s';
@@ -46,6 +49,23 @@ class TemplateOptions
 			throw new \LogicException("Invalid boolean value: \"$enabled\"");
 		}
 		$this->options[self::OPTION_CACHE_ENABLED] = $enabled;
+
+		return $this;
+	}
+
+	public function getAutoSafeEnabled(){
+		return $this->options[self::OPTION_AUTO_SAFE];
+	}
+
+	/**
+	 * @param $enabled
+	 * @return self
+	 */
+	public function setAutoSafeEnabled($enabled){
+		if (!is_bool($enabled)){
+			throw new \LogicException("Invalid boolean value: \"$enabled\"");
+		}
+		$this->options[self::OPTION_AUTO_SAFE] = $enabled;
 
 		return $this;
 	}

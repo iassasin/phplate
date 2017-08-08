@@ -8,6 +8,8 @@
 namespace Iassasin\Phplate;
 
 class Template {
+	const AUTOSAFE_IGNORE = ['safe', 'text', 'raw', 'url'];
+
 	public static $TPL_PATH = './';
 
 	private static $TPL_CACHE = [];
@@ -20,7 +22,6 @@ class Template {
 
 	public $pgm;
 	public $values;
-	public $options;
 	public $res;
 	private $includes;
 	private $blocks;
@@ -69,7 +70,7 @@ class Template {
 	}
 
 	public static function build_str($tplstr, array $values){
-		$c = new TemplateCompiler();
+		$c = new TemplateCompiler(self::$OPTIONS);
 		$c->compile($tplstr);
 		$p = new Template($c->getProgram());
 		$p->run($values);
@@ -99,7 +100,7 @@ class Template {
 				if (array_key_exists($tpath, self::$TPL_CACHE)){
 					$p = self::$TPL_CACHE[$tpath];
 				} else {
-					$c = new TemplateCompiler();
+					$c = new TemplateCompiler(self::$OPTIONS);
 					$c->compile(file_get_contents($tpath));
 
 					$pgm = $c->getProgram();
@@ -488,6 +489,8 @@ class Template {
 		}
 
 		switch ($func){
+			case 'raw':
+				break; // :D
 			case 'safe':
 				$v = htmlspecialchars($v);
 				break;
@@ -590,7 +593,7 @@ class Template {
 
 			default:
 				if (isset(self::$USER_FUNCS[$func])) {
-					$v = self::$USER_FUNCS[$func]($v, $fargs);
+					$v = self::$USER_FUNCS[$func]($v, $fargs); //TODO: обновить на мастере (не смержится автоматом)
 				}
 				break;
 		}
