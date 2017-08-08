@@ -111,4 +111,10 @@ class TemplateTest extends TestCase {
 		);
 		$this->assertEquals('5 10 6 y 7 2 ', $res);
 	}
+
+	public function testInclude(){
+		$msg = 'Hello include!';
+		$res = Template::build('template_with_include', ['data' => ['message' => $msg]]);
+		$this->assertEquals($msg, $res);
+	}
 }
