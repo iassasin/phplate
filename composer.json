@@ -2,6 +2,7 @@
     "name": "iassasin/phplate",
     "description": "Lightweight template engine for PHP",
     "homepage": "https://github.com/iassasin/phplate",
+    "keywords": ["template", "preprocessor"],
     "type": "library",
     "license": "MIT",
     "authors": [
