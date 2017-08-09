@@ -5,21 +5,26 @@
  * Use for good
  */
 
-use PHPUnit\Framework\TestCase;
+namespace Iassasin\Phplate\Tests;
+
 use Iassasin\Phplate\Template;
+use Iassasin\Phplate\TemplateEngine;
+use PHPUnit\Framework\TestCase;
 use Iassasin\Phplate\TemplateOptions;
 
 /**
  * @covers \Iassasin\Phplate\Template
+ * @covers \Iassasin\Phplate\TemplateEngine
+ * @covers \Iassasin\Phplate\PipeFunctionsContainer
  * @covers \Iassasin\Phplate\TemplateCompiler
  * @covers \Iassasin\Phplate\TemplateLexer
  * @covers \Iassasin\Phplate\TemplateOptions
+ * @covers \Iassasin\Phplate\DelayedProgram
  */
-class TemplateTest extends TestCase
-{
-	public function setUp(){
+class TemplateTest extends TestCase {
+	public static function setUpBeforeClass(){
 		Template::init(__DIR__ . '/resources/', (new TemplateOptions())
-				->setCacheEnabled(false)
+			->setCacheEnabled(false)
 		);
 	}
 
@@ -30,14 +35,14 @@ class TemplateTest extends TestCase
 
 	public function testBuildStr(){
 		$msg = 'Hello world!';
-		$this->assertEquals($msg, Template::build_str(
+		$this->assertEquals($msg, Template::buildStr(
 			file_get_contents(__DIR__ . '/resources/template_test.html'),
 			['message' => $msg]
 		));
 	}
 
 	public function testPipeFunctions(){
-		Template::addUserFunctionHandler('my_pow', function ($v, $args){
+		TemplateEngine::instance()->addUserFunctionHandler('my_pow', function ($v, ...$args){
 			return pow($v, $args[0]);
 		});
 		$result = explode('|', Template::build('pipe_test', [
@@ -66,44 +71,60 @@ class TemplateTest extends TestCase
 	}
 
 	public function testFunctionCall(){
-		$res = Template::build_str('{{ f() }}', ['f' => function (){
+		$res = Template::buildStr('{{ f() }}', ['f' => function (){
 			return "no args";
 		}]);
 		$this->assertEquals('no args', $res);
 
-		$res = Template::build_str('{{ f(1) }}', ['f' => function ($a){
+		$res = Template::buildStr('{{ f(1) }}', ['f' => function ($a){
 			return "$a";
 		}]);
 		$this->assertEquals('1', $res);
 
-		$res = Template::build_str('{{ f(1, "a", 3.2) }}', ['f' => function ($a, $b, $c){
+		$res = Template::buildStr('{{ f(1, "a", 3.2) }}', ['f' => function ($a, $b, $c){
 			return "$a $b $c";
 		}]);
 		$this->assertEquals('1 a 3.2', $res);
 	}
 
 	public function testInlineArrays(){
-		$res = Template::build_str('{{ [5, "ght", 2+2, "world", ]|join("") }}', []);
+		$res = Template::buildStr('{{ [5, "ght", 2+2, "world", ]|join("") }}', []);
 		$this->assertEquals('5ght4world', $res);
 
-		$res = Template::build_str(
+		$res = Template::buildStr(
 			'{? for i in [["Boku", "ga"], ["sabishiku"]]; i|join(" ") + " "; end ?}',
 			[]
 		);
 		$this->assertEquals('Boku ga sabishiku ', $res);
 
-		$res = Template::build_str(
+		$res = Template::buildStr(
 			'{? arr = ["Kono" => "machi", "de" => "ikiteiru"];
 				for i in arr|keys; i; " "; arr[i]; " "; end ?}',
 			[]
 		);
 		$this->assertEquals('Kono machi de ikiteiru ', $res);
 
-		$res = Template::build_str(
+		$res = Template::buildStr(
 			'{? arr = [5 => 10, "y", 7 => 2];
 				for i in arr|keys; i; " "; arr[i]; " "; end ?}',
 			[]
 		);
 		$this->assertEquals('5 10 6 y 7 2 ', $res);
+	}
+
+	public function testInclude(){
+		$msg = 'Hello include!';
+		$res = Template::buildStr('{? include template_test data ?}', ['data' => ['message' => $msg]]);
+		$this->assertEquals($msg, $res);
+	}
+
+	public function testAssignment(){
+		$this->assertEquals('5', Template::buildStr('{? v = 5; v ?}', []));
+		$this->assertEquals('5', Template::buildStr('{? v.f = 5; v.f ?}', ['v' => []]));
+		$this->assertEquals('string', Template::buildStr('{? v.f = "string"; v.f ?}', ['v' => []]));
+		$this->assertEquals('s,1,val', Template::buildStr(
+			'{? v.f = []; v.f.arr = ["s", 1, "val"]; v.f.arr|join(",") ?}',
+			['v' => []])
+		);
 	}
 }

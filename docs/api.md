@@ -8,11 +8,16 @@
 public static function Template::init($tplpath, TemplateOptions $options = null)
 ```
 
- Инициализирует phplate, задает каталог, хранящий шаблоны (файлы .html)  
+ Инициализирует phplate, задает каталог, хранящий шаблоны (файлы .html)
+ Если настройки не заданы то шаблонизатор будет инициализирован с настройками по умолчанию
 
 - **`string $tplpath`** - путь к каталогу, содержащему шаблоны сайта
-- **`TemplateOptions $options`** - определяет настройки phplate
-- **Возвращаемое значение**:  нет
+- **`TemplateOptions $options`** - определяет [настройки Phplate](options.md)
+- **Возвращаемое значение**: объект класса `TemplateEngine`.  
+Использование объекта `TemplateEngine` может быть полезно в тех случаях,
+ когда требуется работа *Phplate* в нескольких режимах, то есть с разными настройками.  
+В классе `TemplateEngine` доступны все те же методы API, что и в `Template`, но как нестатичные методы класса.  
+Важно отметить, что *API* всегда работает именно с теми настройками, которые были переданы в `Template::init` перед использованием *API*.
 
 `TemplateOptions` содержит следующие методы:
 - `getDateFormat()` и `setDateFormat(string $format)`
@@ -74,7 +79,7 @@ public static function Template::build($tplname, $values)
 ---
 
 ```php
-public static function Template::build_str($tplstr, $values)
+public static function Template::buildStr($tplstr, $values)
 ```
 
 Выполняет подстановку в аргументов в шаблон, переданный функции напрямую

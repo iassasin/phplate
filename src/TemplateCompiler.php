@@ -13,6 +13,7 @@ class TemplateCompiler {
 	private $pgm;
 	private $lexer;
 	private $endesc;
+	private $res;
 
 	public function __construct(TemplateOptions $options){
 		$this->options = $options;
@@ -20,10 +21,6 @@ class TemplateCompiler {
 		$this->lastop = false;
 		$this->pgm = [];
 		$this->lexer = new TemplateLexer();
-	}
-
-	public function getResult(){
-		return $this->res;
 	}
 
 	public function compile($tpl){

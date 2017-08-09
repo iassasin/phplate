@@ -11,6 +11,8 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * @covers \Iassasin\Phplate\Template
+ * @covers \Iassasin\Phplate\TemplateEngine
+ * @covers \Iassasin\Phplate\PipeFunctionsContainer
  * @covers \Iassasin\Phplate\TemplateCompiler
  * @covers \Iassasin\Phplate\TemplateLexer
  * @covers \Iassasin\Phplate\TemplateOptions
@@ -22,12 +24,12 @@ class TemplateAutosafeTest extends TestCase {
 			->setAutoSafeEnabled(true)
 		);
 
-		$this->assertEquals('<&lt;>', Template::build_str('<{{ val }}>', ['val' => '<']));
-		$this->assertEquals('<<>', Template::build_str('<{{ val|raw }}>', ['val' => '<']));
-		$this->assertEquals('<&lt;>', Template::build_str('<{{ "<"|safe }}>', []));
+		$this->assertEquals('<&lt;>', Template::buildStr('<{{ val }}>', ['val' => '<']));
+		$this->assertEquals('<<>', Template::buildStr('<{{ val|raw }}>', ['val' => '<']));
+		$this->assertEquals('<&lt;>', Template::buildStr('<{{ "<"|safe }}>', []));
 		// проверяем, что при применении другой пайп-функции экранирование работает
-		$this->assertEquals('<&lt;>', Template::build_str('<{{ "<"|lowercase }}>', []));
-		$this->assertEquals('<&lt;&nbsp;&nbsp;>', Template::build_str('<{{ "<  "|text }}>', []));
+		$this->assertEquals('<&lt;>', Template::buildStr('<{{ "<"|lowercase }}>', []));
+		$this->assertEquals('<&lt;&nbsp;&nbsp;>', Template::buildStr('<{{ "<  "|text }}>', []));
 	}
 
 	public function testAutoSafeDisabled(){
@@ -36,8 +38,8 @@ class TemplateAutosafeTest extends TestCase {
 			->setAutoSafeEnabled(false)
 		);
 
-		$this->assertEquals('<<>', Template::build_str('<{{ val }}>', ['val' => '<']));
-		$this->assertEquals('<<>', Template::build_str('<{{ val|raw }}>', ['val' => '<']));
-		$this->assertEquals('<&lt;>', Template::build_str('<{{ val|safe }}>', ['val' => '<']));
+		$this->assertEquals('<<>', Template::buildStr('<{{ val }}>', ['val' => '<']));
+		$this->assertEquals('<<>', Template::buildStr('<{{ val|raw }}>', ['val' => '<']));
+		$this->assertEquals('<&lt;>', Template::buildStr('<{{ val|safe }}>', ['val' => '<']));
 	}
 }
