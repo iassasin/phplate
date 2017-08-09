@@ -29,7 +29,10 @@ class TemplateWidgetTest extends TestCase {
 
 	public function testWidgetUse(){
 		$msg = 'Hello world!';
-		$res = Template::build('template_with_widget', ['hello' => 'Hello', 'world' => 'world']);
+		$res = Template::buildStr(
+			'{? widget hello ?}{? widget world ?}{{ body }}{? end ?}{{ body }}{? end ?}<<hello>>Hello <<world>>world!<</world>><</hello>>',
+			['hello' => 'Hello', 'world' => 'world']
+		);
 		$this->assertEquals($msg, $res);
 	}
 }

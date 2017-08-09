@@ -15,18 +15,20 @@ class TemplateOptions {
 	protected $options = [];
 
 	public function __construct(){
-		$this->options[self::OPTION_AUTO_SAFE] = true; // по умолчанию опция включена
+		$this->options[self::OPTION_DATE_FORMAT] = 'Y-m-d H:i:s';
+		$this->options[self::OPTION_CACHE_ENABLED] = true;
+		$this->options[self::OPTION_AUTO_SAFE] = true;
 	}
 
-	public function getDateFormat(){
-		return $this->options[self::OPTION_DATE_FORMAT] ?: 'Y-m-d H:i:s';
+	public function getDateFormat(): string {
+		return $this->options[self::OPTION_DATE_FORMAT];
 	}
 
 	/**
 	 * @param string $format
 	 * @return self
 	 */
-	public function setDateFormat($format){
+	public function setDateFormat(string $format): self {
 		$date = date($format);
 		if (!$date){
 			throw new \LogicException("Invalid date format: \"{$format}\"");
@@ -36,15 +38,15 @@ class TemplateOptions {
 		return $this;
 	}
 
-	public function getCacheEnabled(){
-		return isset($this->options[self::OPTION_CACHE_ENABLED]) ? $this->options[self::OPTION_CACHE_ENABLED] : true;
+	public function getCacheEnabled(): bool {
+		return $this->options[self::OPTION_CACHE_ENABLED];
 	}
 
 	/**
 	 * @param bool $enabled
 	 * @return self
 	 */
-	public function setCacheEnabled($enabled){
+	public function setCacheEnabled(bool $enabled): self {
 		if (!is_bool($enabled)){
 			throw new \LogicException("Invalid boolean value: \"$enabled\"");
 		}
@@ -53,7 +55,7 @@ class TemplateOptions {
 		return $this;
 	}
 
-	public function getAutoSafeEnabled(){
+	public function getAutoSafeEnabled(): bool {
 		return $this->options[self::OPTION_AUTO_SAFE];
 	}
 
@@ -61,7 +63,7 @@ class TemplateOptions {
 	 * @param $enabled
 	 * @return self
 	 */
-	public function setAutoSafeEnabled($enabled){
+	public function setAutoSafeEnabled(bool $enabled): self {
 		if (!is_bool($enabled)){
 			throw new \LogicException("Invalid boolean value: \"$enabled\"");
 		}

@@ -10,22 +10,15 @@ namespace Iassasin\Phplate;
 class Template {
 	const AUTOSAFE_IGNORE = ['safe', 'text', 'raw', 'url'];
 
-	public static $TPL_PATH = './';
-
-	private static $GLOB_VARS = [];
-	/**
-	 * @var TemplateOptions|null
-	 */
-	private static $OPTIONS;
-
 	public $pgm;
 	public $values;
 	public $res;
 	private $includes;
 	private $blocks;
 	private $widgets;
+	private $globalVars;
 
-	public static function init($tplPath, TemplateOptions $options = null){
+	public static function init($tplPath, TemplateOptions $options = null): TemplateEngine{
 		return TemplateEngine::init($tplPath, $options ?: new TemplateOptions());
 	}
 
@@ -49,13 +42,22 @@ class Template {
 		return TemplateEngine::instance()->buildStr($tplStr, $values);
 	}
 
-	public function __construct($pgm){
+	public static function addUserFunctionHandler(string $name, callable $f){
+		TemplateEngine::instance()->addUserFunctionHandler($name, $f);
+	}
+
+	public function addGlobalVar($name, $val){
+		TemplateEngine::instance()->addGlobalVar($name, $val);
+	}
+
+	public function __construct($pgm, $globalVars){
 		$this->pgm = $pgm;
 		$this->values = [];
 		$this->res = '';
 		$this->includes = [];
 		$this->blocks = [];
 		$this->widgets = [];
+		$this->globalVars = $globalVars;
 	}
 
 	public function run($values){
@@ -109,7 +111,7 @@ class Template {
 						}
 					} else if ($ins[3] !== null){
 						$arg = $this->readValue($ins[3]);
-					} else{
+					} else {
 						$arg = $this->values;
 					}
 
@@ -229,10 +231,9 @@ class Template {
 				return array_key_exists($op[1], $this->values) ? $this->values[$op[1]] : false;
 
 			case 'g':
-				$globalVars = TemplateEngine::instance()->globalVars;
-				if ($op[1] === null) $globalVars;
+				if ($op[1] === null) return $this->globalVars;
 
-				return array_key_exists($op[1], $globalVars) ? $globalVars[$op[1]] : false;
+				return array_key_exists($op[1], $this->globalVars) ? $this->globalVars[$op[1]] : false;
 
 			case '[p':
 				$v = $this->readValue($op[1]);
@@ -391,7 +392,7 @@ class Template {
 			case '-=i':
 			case '*=i':
 			case '/=i':
-				try {
+				try{
 					$v1 =& $this->readValueReference($op[1]);
 				} catch (\Exception $e){
 					return false;
@@ -444,15 +445,14 @@ class Template {
 				return $this->values[$op[1]];
 
 			case 'g':
-				$globalVars = &TemplateEngine::instance()->globalVars;
 				if ($op[1] === null){
-					return $globalVars;
+					return $this->globalVars;
 				}
-				if (!array_key_exists($op[1], $globalVars)){
-					$globalVars[$op[1]] = false;
+				if (!array_key_exists($op[1], $this->globalVars)){
+					$this->globalVars[$op[1]] = false;
 				}
 
-				return $globalVars[$op[1]];
+				return $this->globalVars[$op[1]];
 
 			case '[p':
 				$v =& $this->readValueReference($op[1]);

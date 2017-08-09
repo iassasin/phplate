@@ -76,7 +76,7 @@ class TemplateEngine {
 	public function buildStr($tplStr, array $values): string {
 		$c = new TemplateCompiler($this->options);
 		$c->compile($tplStr);
-		$p = new Template($c->getProgram());
+		$p = new Template($c->getProgram(), $this->globalVars);
 		$p->run($values);
 
 		return $p->getResult();
@@ -90,7 +90,7 @@ class TemplateEngine {
 			if (!file_exists($tpath) || filemtime($tcpath) >= filemtime($tpath)){
 				$pgm = json_decode(file_get_contents($tcpath), true);
 				if ($pgm !== false){
-					$p = new Template($pgm);
+					$p = new Template($pgm, $this->globalVars);
 					$this->tplCache[$tpath] = $p;
 
 					return $p;
@@ -112,7 +112,7 @@ class TemplateEngine {
 						file_put_contents($tcpath, json_encode($pgm));
 					}
 
-					$p = new Template($pgm);
+					$p = new Template($pgm, $this->globalVars);
 					$this->tplCache[$tpath] = $p;
 				}
 

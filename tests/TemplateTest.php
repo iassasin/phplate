@@ -114,7 +114,7 @@ class TemplateTest extends TestCase {
 
 	public function testInclude(){
 		$msg = 'Hello include!';
-		$res = Template::build('template_with_include', ['data' => ['message' => $msg]]);
+		$res = Template::buildStr('{? include template_test data ?}', ['data' => ['message' => $msg]]);
 		$this->assertEquals($msg, $res);
 	}
 }
