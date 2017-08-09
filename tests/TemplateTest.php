@@ -146,6 +146,7 @@ class TemplateTest extends TestCase {
 	public function testGlobalVars(){
 		Template::addGlobalVar('gvar', ['key1' => 'val1', 'key2' => 2]);
 		$this->assertEquals('val12', Template::buildStr('{{ $gvar.key1 + $gvar.key2 }}', []));
+		$this->assertEquals('newgvar', Template::buildStr('{{ $newgvar = "newgvar"; $newgvar }}', []));
 	}
 
 	public function testComments(){
