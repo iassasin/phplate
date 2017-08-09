@@ -124,7 +124,19 @@ class TemplateTest extends TestCase {
 		$this->assertEquals('string', Template::buildStr('{? v.f = "string"; v.f ?}', ['v' => []]));
 		$this->assertEquals('s,1,val', Template::buildStr(
 			'{? v.f = []; v.f.arr = ["s", 1, "val"]; v.f.arr|join(",") ?}',
-			['v' => []])
-		);
+			['v' => []]
+		));
+	}
+
+	public function testBlocks(){
+		$this->assertEquals('', Template::buildStr('{? #invalid ?}', []));
+		$this->assertEquals('test', Template::buildStr(
+			'{? block tb; "test" end; #tb ?}',
+			[]
+		));
+		$this->assertEquals('012', Template::buildStr(
+			'{? block tb; this[0]; this[1]; this[2] end; #tb(0, 1, 2) ?}',
+			[]
+		));
 	}
 }
