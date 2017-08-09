@@ -5,14 +5,33 @@
 ---
 
 ```php
-public static function Template::init($tplpath, $cache_enabled = true)
+public static function Template::init($tplpath, TemplateOptions $options = null)
 ```
 
- Инициализирует шаблонизатор, задает каталог, хранящий шаблоны (файлы .html)  
+ Инициализирует phplate, задает каталог, хранящий шаблоны (файлы .html)  
 
 - **`string $tplpath`** - путь к каталогу, содержащему шаблоны сайта
-- **`boolean $cache_enabled`** - определяет, включено ли кэширование результатов компиляции шаблонов (в файлы .ctpl)
+- **`TemplateOptions $options`** - определяет настройки phplate
 - **Возвращаемое значение**:  нет
+
+`TemplateOptions` содержит следующие методы:
+- `getDateFormat()` и `setDateFormat(string $format)`
+  - Управление форматом по-умолчанию для пайп-функции `date`
+  - Значение по-умолчанию: `Y-m-d H:i:s`
+- `getCacheEnabled()` и `setCacheEnabled(boolean $value)`
+  - Управление кэшированием результата компиляции шаблона (в файлы .ctpl)
+  - Значение по-умолчанию: `true`
+- `getAutoSafeEnabled()` и `setAutoSafeEnabled(boolean $value)`
+  - Управление автоматическим применением пайп-функции `safe` для всего вывода в [блоке аргументов](syntax.md)
+  - Значение по-умолчанию: `true`
+
+Пример настройки:
+```php
+Template::init($_SERVER['DOCUMENT_ROOT'].'/templates/', (new TemplateOptions)
+    ->setCacheEnabled(true)
+    ->setAutoSafeEnabled(true)
+);
+```
 
 ---
 
@@ -23,9 +42,10 @@ public static function Template::addUserFunctionHandler($f)
 Назначает пользовательский обработчик пайп-функций
 
 - **`function $f`** - функция вида **`function ($val, $fargs)`**
- - **`mixed $val`** - исходное значение
- - **`array $fargs`** - массив переданных пайп-функции аргументов
- - **Возвращаемое значение**:  новое значение `$val`
+  - **`mixed $val`** - исходное значение
+  - **`array $fargs`** - массив переданных пайп-функции аргументов
+  - **Возвращаемое значение**:  новое значение `$val`
+- **Возвращаемое значение**:  нет
 
 ---
 
