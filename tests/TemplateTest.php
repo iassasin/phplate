@@ -175,4 +175,15 @@ class TemplateTest extends TestCase {
 		$this->assertEquals('&gt; Hello world!', $res);
 	}
 
+	public function testConstructionIf(){
+		$this->assertEquals('1', Template::buildStr(
+			'{? if false; 0; end; if true; 1; end ?}',
+			[]
+		));
+		$this->assertEquals('2', Template::buildStr(
+			'{? if false; 1; else if true; 2; end ?}',
+			[]
+		));
+	}
+
 }
