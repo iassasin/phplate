@@ -158,6 +158,27 @@ class TemplateTest extends TestCase {
 	}
 
 	public function testOperators(){
+		$this->assertEquals('2', Template::buildStr('{{ +2 }}', []));
+		$this->assertEquals('0', Template::buildStr('{{ 2-2 }}', []));
+		$this->assertEquals('1.2', Template::buildStr('{{ 12/10 }}', []));
+
+		$this->assertEquals('1', Template::buildStr('{? if 2 == "2" and 1 != "3"; 1; end ?}', []));
+		$this->assertEquals('1', Template::buildStr('{? if 2 === 2 and 2 !== "2"; 1; end ?}', []));
+		$this->assertEquals('1', Template::buildStr(
+			'{? if 3 > 2 and 2 >= 2 and 2 < 3 and 2 <= 3; 1; end ?}',
+			[]
+		));
+		$this->assertEquals('1', Template::buildStr('{? if false or true; 1; end ?}', []));
+		$this->assertEquals('7', Template::buildStr('{{ 3 xor 4 }}', []));
+
+		$this->assertEquals('val', Template::buildStr('{{ false ?? "val" }}', []));
+		$this->assertEquals('val', Template::buildStr('{{ "val" ?? "fail" }}', []));
+
+		$this->assertEquals('5', Template::buildStr('{{ i = 0; i += 5; i }}', []));
+		$this->assertEquals('-5', Template::buildStr('{{ i = 0; i -= 5; i }}', []));
+		$this->assertEquals('6', Template::buildStr('{{ i = 2; i *= 3; i }}', []));
+		$this->assertEquals('2', Template::buildStr('{{ i = 6; i /= 3; i }}', []));
+
 		$this->assertEquals('6', Template::buildStr('{{ 2+2*2 }}', []));
 		$this->assertEquals('8', Template::buildStr('{{ (2+2)*2 }}', []));
 		$this->assertEquals('8', Template::buildStr('{{ -(2+2) * -2 }}', []));
