@@ -154,4 +154,14 @@ class TemplateTest extends TestCase {
 		$this->assertEquals("\n \r \t ' &quot; \\ \\h", Template::buildStr('{{ \'\n \r \t \\\' \" \\\\ \h\' }}', []));
 	}
 
+	public function testOperators(){
+		$this->assertEquals('6', Template::buildStr('{{ 2+2*2 }}', []));
+		$this->assertEquals('8', Template::buildStr('{{ (2+2)*2 }}', []));
+		$this->assertEquals('8', Template::buildStr('{{ -(2+2) * -2 }}', []));
+		$this->assertEquals('true', Template::buildStr(
+			'{? if t === true and f === false and n === null; "true" else "false" end ?}',
+			['t' => true, 'f' => false, 'n' => null]
+		));
+	}
+
 }
