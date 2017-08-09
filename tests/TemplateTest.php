@@ -145,4 +145,8 @@ class TemplateTest extends TestCase {
 		$this->assertEquals('val12', Template::buildStr('{{ $gvar.key1 + $gvar.key2 }}', []));
 	}
 
+	public function testComments(){
+		$this->assertEquals('value', Template::buildStr('v{* test {{t}} *}alue', ['t' => 'test']));
+	}
+
 }
