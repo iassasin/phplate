@@ -186,4 +186,15 @@ class TemplateTest extends TestCase {
 		));
 	}
 
+	public function testConstructionFor(){
+		$this->assertEquals('123', Template::buildStr(
+			'{? for v in [1, 2, 3]; v; end ?}',
+			[]
+		));
+		$this->assertEquals('12345', Template::buildStr(
+			'{? for v = 1 while v < 6 next v += 1; v; end ?}',
+			[]
+		));
+	}
+
 }
