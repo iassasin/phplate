@@ -197,4 +197,24 @@ class TemplateTest extends TestCase {
 		));
 	}
 
+	public function testObjectAccess(){
+		$obj = new class {
+			public $field = 'fld';
+			public function f($a, $b, $c){ return "$a $b $c"; }
+		};
+
+		$this->assertEquals('1 2 3', Template::buildStr(
+			'{{ o.f(1, 2, 3) }}',
+			['o' => $obj]
+		));
+
+		$this->assertEquals('1 2 3', Template::buildStr(
+			'{{ o["f"](1, 2, 3) }}',
+			['o' => $obj]
+		));
+
+		$this->assertEquals('fld', Template::buildStr('{{ o.field }}', ['o' => $obj]));
+		$this->assertEquals('fld', Template::buildStr('{{ o["field"] }}', ['o' => $obj]));
+	}
+
 }
