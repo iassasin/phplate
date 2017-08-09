@@ -26,6 +26,7 @@ class TemplateTest extends TestCase {
 		Template::init(__DIR__ . '/resources/', (new TemplateOptions())
 			->setCacheEnabled(false)
 		);
+		Template::addGlobalVar('gvar', ['key1' => 'val1', 'key2' => 2]);
 	}
 
 	public function testBuild(){
@@ -139,4 +140,9 @@ class TemplateTest extends TestCase {
 			[]
 		));
 	}
+
+	public function testGlobalVars(){
+		$this->assertEquals('val12', Template::buildStr('{{ $gvar.key1 + $gvar.key2 }}', []));
+	}
+
 }
