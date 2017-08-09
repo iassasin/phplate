@@ -43,6 +43,7 @@ class TemplateTest extends TestCase {
 	}
 
 	public function testPipeFunctions(){
+		$time = time();
 		TemplateEngine::instance()->addUserFunctionHandler('my_pow', function ($v, ...$args){
 			return pow($v, $args[0]);
 		});
@@ -50,6 +51,7 @@ class TemplateTest extends TestCase {
 			'arr' => ['Hello' => 'world!', 1 => '2'],
 			'slices' => [1, 2, 3, 4],
 			'num' => 2,
+			'time' => $time,
 		]));
 		$i = 0;
 		$this->assertEquals('&lt;&gt;', $result[$i++]); // safe
@@ -68,7 +70,8 @@ class TemplateTest extends TestCase {
 		$this->assertEquals('3', $result[$i++]); // slice(two arguments) & join
 		$this->assertEquals('Hello hello!', $result[$i++]); // replace
 		$this->assertEquals(4, $result[$i++]); // тест работы пользовательской функции my_pow
-		$this->assertEquals(16, $i); // сколько тестов должно быть выполнено
+		$this->assertEquals(date('Y-m-d H:i:s', $time), $result[$i++]); // тест работы пользовательской функции my_pow
+		$this->assertEquals(17, $i); // сколько тестов должно быть выполнено
 	}
 
 	public function testFunctionCall(){
