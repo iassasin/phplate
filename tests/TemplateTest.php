@@ -129,6 +129,10 @@ class TemplateTest extends TestCase {
 			'{? v.f = []; v.f.arr = ["s", 1, "val"]; v.f.arr|join(",") ?}',
 			['v' => []]
 		));
+		$this->assertEquals('s,1,val', Template::buildStr(
+			'{? v["f"] = []; v["f"]["arr"] = ["s", 1, "val"]; v["f"]["arr"]|join(",") ?}',
+			['v' => []]
+		));
 	}
 
 	public function testBlocks(){
