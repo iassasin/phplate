@@ -117,4 +117,14 @@ class TemplateTest extends TestCase {
 		$res = Template::buildStr('{? include template_test data ?}', ['data' => ['message' => $msg]]);
 		$this->assertEquals($msg, $res);
 	}
+
+	public function testAssignment(){
+		$this->assertEquals('5', Template::buildStr('{? v = 5; v ?}', []));
+		$this->assertEquals('5', Template::buildStr('{? v.f = 5; v.f ?}', ['v' => []]));
+		$this->assertEquals('string', Template::buildStr('{? v.f = "string"; v.f ?}', ['v' => []]));
+		$this->assertEquals('s,1,val', Template::buildStr(
+			'{? v.f = []; v.f.arr = ["s", 1, "val"]; v.f.arr|join(",") ?}',
+			['v' => []])
+		);
+	}
 }
