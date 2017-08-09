@@ -149,4 +149,9 @@ class TemplateTest extends TestCase {
 		$this->assertEquals('value', Template::buildStr('v{* test {{t}} *}alue', ['t' => 'test']));
 	}
 
+	public function testStrings(){
+		$this->assertEquals("\n \r \t ' &quot; \\ \\h", Template::buildStr('{{ "\n \r \t \\\' \" \\\\ \h" }}', []));
+		$this->assertEquals("\n \r \t ' &quot; \\ \\h", Template::buildStr('{{ \'\n \r \t \\\' \" \\\\ \h\' }}', []));
+	}
+
 }
