@@ -26,7 +26,6 @@ class TemplateTest extends TestCase {
 		Template::init(__DIR__ . '/resources/', (new TemplateOptions())
 			->setCacheEnabled(false)
 		);
-		Template::addGlobalVar('gvar', ['key1' => 'val1', 'key2' => 2]);
 	}
 
 	public function testBuild(){
@@ -44,7 +43,7 @@ class TemplateTest extends TestCase {
 
 	public function testPipeFunctions(){
 		$time = time();
-		TemplateEngine::instance()->addUserFunctionHandler('my_pow', function ($v, ...$args){
+		Template::addUserFunctionHandler('my_pow', function ($v, ...$args){
 			return pow($v, $args[0]);
 		});
 		$result = explode('|', Template::build('pipe_test', [
@@ -145,6 +144,7 @@ class TemplateTest extends TestCase {
 	}
 
 	public function testGlobalVars(){
+		Template::addGlobalVar('gvar', ['key1' => 'val1', 'key2' => 2]);
 		$this->assertEquals('val12', Template::buildStr('{{ $gvar.key1 + $gvar.key2 }}', []));
 	}
 
