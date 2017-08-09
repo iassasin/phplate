@@ -46,7 +46,7 @@ class Template {
 		TemplateEngine::instance()->addUserFunctionHandler($name, $f);
 	}
 
-	public function addGlobalVar($name, $val){
+	public static function addGlobalVar($name, $val){
 		TemplateEngine::instance()->addGlobalVar($name, $val);
 	}
 
