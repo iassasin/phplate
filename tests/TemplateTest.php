@@ -167,4 +167,12 @@ class TemplateTest extends TestCase {
 		));
 	}
 
+	public function testWidgetUse(){
+		$res = Template::buildStr(
+			'{? widget hello ?}{? widget world ?}{{ body }}{? end ?}{{ attrs.pre; body }}{? end ?}<<hello pre="> ">>Hello <<world>>world!<</world>><</hello>>',
+			['hello' => 'Hello', 'world' => 'world']
+		);
+		$this->assertEquals('&gt; Hello world!', $res);
+	}
+
 }
