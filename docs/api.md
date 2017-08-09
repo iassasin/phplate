@@ -8,15 +8,34 @@
 public static function Template::init($tplpath, TemplateOptions $options = null)
 ```
 
- Инициализирует шаблонизатор, задает каталог, хранящий шаблоны (файлы .html)
+ Инициализирует phplate, задает каталог, хранящий шаблоны (файлы .html)
  Если настройки не заданы то шаблонизатор будет инициализирован с настройками по умолчанию
 
 - **`string $tplpath`** - путь к каталогу, содержащему шаблоны сайта
-- **`TemplateOptions $options`** - объект с [настройками Phplate](options.md)
+- **`TemplateOptions $options`** - определяет [настройки Phplate](options.md)
 - **Возвращаемое значение**: объект класса `TemplateEngine`.
  Использование объекта `TemplateEngine` может быть полезно в тех случаях,
  когда требуется работа *Phplate* в нескольких режимах, то есть с разными настройками.
  Важно отметить, что *API* всегда работает именно с теми настройками, которые были переданы в `Template::init` перед использованием *API*.
+
+`TemplateOptions` содержит следующие методы:
+- `getDateFormat()` и `setDateFormat(string $format)`
+  - Управление форматом по-умолчанию для пайп-функции `date`
+  - Значение по-умолчанию: `Y-m-d H:i:s`
+- `getCacheEnabled()` и `setCacheEnabled(boolean $value)`
+  - Управление кэшированием результата компиляции шаблона (в файлы .ctpl)
+  - Значение по-умолчанию: `true`
+- `getAutoSafeEnabled()` и `setAutoSafeEnabled(boolean $value)`
+  - Управление автоматическим применением пайп-функции `safe` для всего вывода в [блоке аргументов](syntax.md)
+  - Значение по-умолчанию: `true`
+
+Пример настройки:
+```php
+Template::init($_SERVER['DOCUMENT_ROOT'].'/templates/', (new TemplateOptions)
+    ->setCacheEnabled(true)
+    ->setAutoSafeEnabled(true)
+);
+```
 
 ---
 
@@ -27,9 +46,10 @@ public static function Template::addUserFunctionHandler($f)
 Назначает пользовательский обработчик пайп-функций
 
 - **`function $f`** - функция вида **`function ($val, $fargs)`**
- - **`mixed $val`** - исходное значение
- - **`array $fargs`** - массив переданных пайп-функции аргументов
- - **Возвращаемое значение**:  новое значение `$val`
+  - **`mixed $val`** - исходное значение
+  - **`array $fargs`** - массив переданных пайп-функции аргументов
+  - **Возвращаемое значение**:  новое значение `$val`
+- **Возвращаемое значение**:  нет
 
 ---
 
