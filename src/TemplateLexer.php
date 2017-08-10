@@ -143,15 +143,15 @@ class TemplateLexer {
 		return $this->toktype == $type && $this->token == $val;
 	}
 
-	/** @codeCoverageIgnoreStart */
+	/** @codeCoverageIgnore */
 	public function getToken(){
 		return [$this->toktype, $this->token];
 	}
 
+	/** @codeCoverageIgnore */
 	public function getTokenStr(){
 		return '[' . $this->toktype . ', "' . $this->token . '"]';
 	}
-	/** @codeCoverageIgnoreEnd */
 
 	public function parseExpression(){
 		return $this->infix(1);

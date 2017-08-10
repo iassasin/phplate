@@ -30,6 +30,11 @@ class TemplateLexerTest extends TestCase {
 		Template::buildStr('{{ 1|safe(1 }}', []);
 	}
 
+	public function testIncorrectFuncCall2(){
+		$this->expectException(\Exception::class);
+		Template::buildStr('{{ safe(1 }}', []);
+	}
+
 	public function testIncorrectArgument(){
 		$this->expectException(\Exception::class);
 		Template::buildStr('{{ this[] }}', []);
@@ -37,11 +42,36 @@ class TemplateLexerTest extends TestCase {
 
 	public function testIncorrectArr(){
 		$this->expectException(\Exception::class);
-		Template::buildStr('{{ this[1 }}', []);
+		Template::buildStr('{{ var[', []);
 	}
 
-	public function testIncorrectFunctionCall(){
+	public function testIncorrectArr2(){
+		$this->expectException(\Exception::class);
+		Template::buildStr('{{ var[2', []);
+	}
+
+	public function testNotClosedBraces(){
 		$this->expectException(\Exception::class);
 		Template::buildStr('{? (1 ?}', []);
+	}
+
+	public function testEndOfFile(){
+		$this->expectException(\Exception::class);
+		Template::buildStr('{? 1 + ', []);
+	}
+
+	public function testEndOfFile2(){
+		$this->expectException(\Exception::class);
+		Template::buildStr('{{ (', []);
+	}
+
+	public function testFailBlock(){
+		$this->expectException(\Exception::class);
+		Template::buildStr('{{ #', []);
+	}
+
+	public function testFailBlock2(){
+		$this->expectException(\Exception::class);
+		Template::buildStr('{{ #name(23 }}', []);
 	}
 }

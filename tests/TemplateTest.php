@@ -51,6 +51,7 @@ class TemplateTest extends TestCase {
 			'slices' => [1, 2, 3, 4],
 			'num' => 2,
 			'time' => $time,
+			'time2' => $time2 = new \DateTimeImmutable(),
 		]));
 		$i = 0;
 		$this->assertEquals('&lt;&gt;', $result[$i++]); // safe
@@ -70,17 +71,12 @@ class TemplateTest extends TestCase {
 		$this->assertEquals('3', $result[$i++]); // slice(two arguments) & join
 		$this->assertEquals('Hello hello!', $result[$i++]); // replace
 		$this->assertEquals(4, $result[$i++]); // тест работы пользовательской функции my_pow
-		$this->assertEquals(date('Y-m-d H:i:s', $time), $result[$i++]); // тест работы пользовательской функции my_pow
-		$this->assertEquals(18, $i); // сколько тестов должно быть выполнено
+		$this->assertEquals(date('Y-m-d H:i:s', $time), $result[$i++]); // тест работы функции date
+		$this->assertEquals($time2->format(TemplateEngine::instance()->getOptions()->getDateFormat()), $result[$i++]);
+		$this->assertEquals(19, $i); // сколько тестов должно быть выполнено
 
 		$this->expectException(\RuntimeException::class);
 		Template::buildStr('{{ 1|unknown }}', []);
-	}
-
-	public function testPipeFunctionDateTime(){
-		$time = new \DateTimeImmutable();
-		$result = Template::buildStr('{{ time|date }}', ['time' => $time]);
-		$this->assertEquals($time->format(TemplateEngine::instance()->getOptions()->getDateFormat()), $result);
 	}
 
 	public function testInvalidPipeFunctionSubStr(){
