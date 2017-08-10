@@ -47,9 +47,6 @@ class TemplateOptions {
 	 * @return self
 	 */
 	public function setCacheEnabled(bool $enabled): self {
-		if (!is_bool($enabled)){
-			throw new \LogicException("Invalid boolean value: \"$enabled\"");
-		}
 		$this->options[self::OPTION_CACHE_ENABLED] = $enabled;
 
 		return $this;
@@ -64,9 +61,6 @@ class TemplateOptions {
 	 * @return self
 	 */
 	public function setAutoSafeEnabled(bool $enabled): self {
-		if (!is_bool($enabled)){
-			throw new \LogicException("Invalid boolean value: \"$enabled\"");
-		}
 		$this->options[self::OPTION_AUTO_SAFE] = $enabled;
 
 		return $this;

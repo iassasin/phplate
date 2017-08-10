@@ -23,4 +23,9 @@ class TemplatOptionsTest extends TestCase {
 		$this->assertEquals(true, $opt->getAutoSafeEnabled());
 		$this->assertEquals('[Y-m-d H:i:s]', $opt->getDateFormat());
 	}
+
+	public function testInvalidOptionDate(){
+		$this->expectException(\LogicException::class);
+		(new TemplateOptions())->setDateFormat('0');
+	}
 }

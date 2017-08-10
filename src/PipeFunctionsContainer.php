@@ -134,12 +134,10 @@ class PipeFunctionsContainer {
 		if (!is_numeric($arg)){
 			$arg = strtotime($arg);
 		}
-		$arg = date($format, $arg);
 
 		if (false === $arg){
 			throw new \RuntimeException('Некорректное значение даты-времени: ' . $oldVal);
 		}
-
-		return $arg;
+		return date($format, $arg);
 	}
 }

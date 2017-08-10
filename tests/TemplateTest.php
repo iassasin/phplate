@@ -51,12 +51,14 @@ class TemplateTest extends TestCase {
 			'slices' => [1, 2, 3, 4],
 			'num' => 2,
 			'time' => $time,
+			'time2' => $time2 = new \DateTimeImmutable(),
 		]));
 		$i = 0;
 		$this->assertEquals('&lt;&gt;', $result[$i++]); // safe
 		$this->assertEquals("\n<br>Hello\n<br>World!", $result[$i++]); // text
 		$this->assertEquals('hello world', $result[$i++]); // lowercase
 		$this->assertEquals('HELLO WORLD', $result[$i++]); // uppercase
+		$this->assertEquals('&lt;&gt;', $result[$i++]); // url
 		$this->assertEquals('%26', $result[$i++]); // urlparam
 		$this->assertEquals('{"Hello":"world!","1":"2"}', $result[$i++]); // json
 		$this->assertEquals(2, $result[$i++]); // count
@@ -69,8 +71,32 @@ class TemplateTest extends TestCase {
 		$this->assertEquals('3', $result[$i++]); // slice(two arguments) & join
 		$this->assertEquals('Hello hello!', $result[$i++]); // replace
 		$this->assertEquals(4, $result[$i++]); // тест работы пользовательской функции my_pow
-		$this->assertEquals(date('Y-m-d H:i:s', $time), $result[$i++]); // тест работы пользовательской функции my_pow
-		$this->assertEquals(17, $i); // сколько тестов должно быть выполнено
+		$this->assertEquals(date('Y-m-d H:i:s', $time), $result[$i++]); // тест работы функции date
+		$this->assertEquals($time2->format(TemplateEngine::instance()->getOptions()->getDateFormat()), $result[$i++]);
+		$this->assertEquals(19, $i); // сколько тестов должно быть выполнено
+
+		$this->expectException(\RuntimeException::class);
+		Template::buildStr('{{ 1|unknown }}', []);
+	}
+
+	public function testInvalidPipeFunctionSubStr(){
+		$this->expectException(\InvalidArgumentException::class);
+		Template::buildStr('{{ 1|substr }}', []);
+	}
+
+	public function testInvalidPipeFunctionSlice(){
+		$this->expectException(\InvalidArgumentException::class);
+		Template::buildStr('{{ 1|slice }}', []);
+	}
+
+	public function testInvalidPipeFunctionReplace(){
+		$this->expectException(\InvalidArgumentException::class);
+		Template::buildStr('{{ 1|replace }}', []);
+	}
+
+	public function testInvalidPipeFunctionDate(){
+		$this->expectException(\RuntimeException::class);
+		Template::buildStr('{{ time|date }}', ['time' => true]);
 	}
 
 	public function testFunctionCall(){
@@ -226,7 +252,10 @@ class TemplateTest extends TestCase {
 	public function testObjectAccess(){
 		$obj = new class {
 			public $field = 'fld';
-			public function f($a, $b, $c){ return "$a $b $c"; }
+
+			public function f($a, $b, $c){
+				return "$a $b $c";
+			}
 		};
 
 		$this->assertEquals('1 2 3', Template::buildStr(
