@@ -23,9 +23,26 @@ class TemplateLexer {
 	const TERMINAL_OPERATORS = '.,@#;()[]$';
 	const ID_OPERATORS = ['and', 'or', 'xor', 'not'];
 
-	private static $PRE_OPS;
-	private static $INF_OPS;
+	private static $PRE_OPS = [
+		10 => ['+', '-', '!', 'not'],
+		11 => ['$'],
+	];
+	private static $INF_OPS = [
+		1 => ['=', '+=', '-=', '*=', '/='],
+		2 => ['??'],
+		3 => ['or'],
+		4 => ['xor'],
+		5 => ['and'],
+		6 => ['==', '===', '!=', '!==', '>=', '<=', '<', '>'],
+		7 => ['+', '-'],
+		8 => ['*', '/'],
+		9 => ['^'],
+
+		11 => ['.'],
+	];
 	private static $POST_OPS;
+
+	private static $init = false;
 
 	public $toktype;
 	public $token;
@@ -33,39 +50,24 @@ class TemplateLexer {
 	private $ilen;
 	private $cpos;
 	private $cline;
+
 	private $state;
 
 	public function __construct(){
+		if (!self::$init) {
+			self::_init();
+		}
 		$this->toktype = self::TOK_NONE;
 		$this->token = '';
 	}
 
 	public static function _init(){
-		self::$PRE_OPS = [
-			10 => ['+', '-', '!', 'not'],
-			11 => ['$'],
-		];
-
-		self::$INF_OPS = [
-			1 => ['=', '+=', '-=', '*=', '/='],
-			2 => ['??'],
-			3 => ['or'],
-			4 => ['xor'],
-			5 => ['and'],
-			6 => ['==', '===', '!=', '!==', '>=', '<=', '<', '>'],
-			7 => ['+', '-'],
-			8 => ['*', '/'],
-			9 => ['^'],
-
-			11 => ['.'],
-		];
-
+		self::$init = true;
 		self::$POST_OPS = [
 			10 => [
 				'|' => function (TemplateLexer $parser, $val, $lvl){
 					if (!$parser->nextToken() || $parser->toktype != self::TOK_ID){
 						$parser->error('Function name excepted in "|"');
-						return null;
 					}
 
 					$fname = $parser->token;
@@ -80,7 +82,6 @@ class TemplateLexer {
 
 							if ($parser->toktype != self::TOK_OP || $parser->token != ')'){
 								$parser->error('Excepted ")" in pipe-function call');
-								return null;
 							}
 
 							$parser->nextToken();
@@ -93,14 +94,12 @@ class TemplateLexer {
 				'[' => function (TemplateLexer $parser, $val, $lvl){
 					if (!$parser->nextToken()){
 						$parser->error('Argument excepted in "["');
-						return null;
 					}
 
 					$arg = $parser->infix(1);
 
 					if ($parser->toktype != self::TOK_OP || $parser->token != ']'){
 						$parser->error('Excepted "]"');
-						return null;
 					}
 
 					$parser->nextToken();
@@ -122,7 +121,6 @@ class TemplateLexer {
 
 					if (!$parser->isToken(self::TOK_OP, ')')){
 						$parser->error('Excepted ")" in function call');
-						return null;
 					}
 
 					$parser->nextToken();
@@ -145,6 +143,7 @@ class TemplateLexer {
 		return $this->toktype == $type && $this->token == $val;
 	}
 
+	/** @codeCoverageIgnoreStart */
 	public function getToken(){
 		return [$this->toktype, $this->token];
 	}
@@ -152,6 +151,7 @@ class TemplateLexer {
 	public function getTokenStr(){
 		return '[' . $this->toktype . ', "' . $this->token . '"]';
 	}
+	/** @codeCoverageIgnoreEnd */
 
 	public function parseExpression(){
 		return $this->infix(1);
@@ -169,7 +169,6 @@ class TemplateLexer {
 
 			if (!$this->nextToken()){
 				$this->error('Unexcepted end of file. Operator excepted.');
-				return null;
 			}
 
 			if (is_callable($oplvl[1])){
@@ -192,7 +191,6 @@ class TemplateLexer {
 				if ($op == '#'){ //block
 					if (!$this->nextToken() || $this->toktype != self::TOK_ID){
 						$this->error('Block name excepted');
-						return null;
 					}
 
 					$bname = $this->token;
@@ -207,7 +205,6 @@ class TemplateLexer {
 
 							if ($this->toktype != self::TOK_OP || $this->token != ')'){
 								$this->error('Excepted ")"');
-								return null;
 							}
 
 							$this->nextToken();
@@ -220,14 +217,12 @@ class TemplateLexer {
 				} else if ($op == '('){
 					if (!$this->nextToken()){
 						$this->error('Argument excepted in "("');
-						return null;
 					}
 
 					$val = $this->infix(1);
 
 					if ($this->toktype != self::TOK_OP || $this->token != ')'){
 						$this->error('Excepted ")"');
-						return null;
 					}
 
 					$this->nextToken();
@@ -251,12 +246,12 @@ class TemplateLexer {
 					$oplvl = $this->findOperator(self::$PRE_OPS, $lvl, $op);
 					if ($oplvl == null){
 						$this->error('Unexcepted operator "' . $this->token . '"');
-						break;
+						// break;
 					}
 
 					if (!$this->nextToken()){
 						$this->error('Unexcepted end of file. Excepted identificator or expression');
-						break;
+						// break;
 					}
 
 					$val = $this->infix($oplvl[0]);
@@ -303,11 +298,11 @@ class TemplateLexer {
 
 			case self::TOK_NONE:
 				$this->error('Unexcepted end of file');
-				break;
+				// break;
 
 			default:
 				$this->error('Unknown token (type: ' . $this->toktype . '): "' . $this->token . '"');
-				break;
+				// break;
 		}
 
 		return null;
@@ -316,7 +311,6 @@ class TemplateLexer {
 	public function parseInlineArray($lvl){
 		if (!$this->nextToken()){
 			$this->error('Expression or "]" excepted after "["');
-			return null;
 		}
 
 		$vals = [];
@@ -345,7 +339,6 @@ class TemplateLexer {
 
 		if (!$this->isToken(self::TOK_OP, ']')){
 			$this->error('Excepted "]" for inline array');
-			return null;
 		}
 
 		$this->nextToken();
@@ -707,5 +700,3 @@ class TemplateLexer {
 		return null;
 	}
 }
-
-TemplateLexer::_init();
