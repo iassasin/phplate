@@ -76,21 +76,25 @@ class TemplateEngine {
 	public function buildStr($tplStr, array $values): string {
 		$c = new TemplateCompiler($this->options);
 		$c->compile($tplStr);
-		$p = new Template($c->getProgram(), $this->globalVars);
+		$p = new Template('', $c->getProgram(), $this->globalVars);
 		$p->run($values);
 
 		return $p->getResult();
 	}
 
-	public function compile($tplName){
-		$tpath = $this->tplPath . $tplName . '.html';
-		$tcpath = $this->tplPath . $tplName . '.ctpl';
+	public function compile(string $tplName, string $includeFrom = null){
+		$path = $this->tplPath;
+		if (null !== $includeFrom && '' !== $includeFrom && '/' !== $tplName{0}){
+			$path = dirname($includeFrom) . '/';
+		}
+		$tpath = $path . $tplName . '.html';
+		$tcpath = $path . $tplName . '.ctpl';
 
 		if ($this->options->getCacheEnabled() && file_exists($tcpath)){
 			if (!file_exists($tpath) || filemtime($tcpath) >= filemtime($tpath)){
 				$pgm = json_decode(file_get_contents($tcpath), true);
 				if ($pgm !== false){
-					$p = new Template($pgm, $this->globalVars);
+					$p = new Template($tpath, $pgm, $this->globalVars);
 					$this->tplCache[$tpath] = $p;
 
 					return $p;
@@ -112,7 +116,7 @@ class TemplateEngine {
 						file_put_contents($tcpath, json_encode($pgm));
 					}
 
-					$p = new Template($pgm, $this->globalVars);
+					$p = new Template($tpath, $pgm, $this->globalVars);
 					$this->tplCache[$tpath] = $p;
 				}
 

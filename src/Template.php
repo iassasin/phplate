@@ -10,6 +10,7 @@ namespace Iassasin\Phplate;
 class Template {
 	const AUTOSAFE_IGNORE = ['safe', 'text', 'raw', 'url'];
 
+	private $path;
 	public $pgm;
 	public $values;
 	public $res;
@@ -50,7 +51,8 @@ class Template {
 		TemplateEngine::instance()->addGlobalVar($name, $val);
 	}
 
-	public function __construct($pgm, $globalVars){
+	public function __construct(string $path, $pgm, $globalVars){
+		$this->path = $path;
 		$this->pgm = $pgm;
 		$this->values = [];
 		$this->res = '';
@@ -58,6 +60,10 @@ class Template {
 		$this->blocks = [];
 		$this->widgets = [];
 		$this->globalVars = $globalVars;
+	}
+
+	public function getPath(): string {
+		return $this->path;
 	}
 
 	public function run($values){
@@ -119,7 +125,7 @@ class Template {
 						$arg = [$arg];
 					}
 
-					$p = TemplateEngine::instance()->compile($ins[1]);
+					$p = TemplateEngine::instance()->compile($ins[1], $this->path);
 					if (is_string($p)){
 						$this->res .= $p;
 					} else {
