@@ -181,6 +181,8 @@ class TemplateTest extends TestCase {
 
 	public function testComments(){
 		$this->assertEquals('value', Template::buildStr('v{* test {{t}} *}alue', ['t' => 'test']));
+		$this->assertEquals('test', Template::buildStr("{? // t @#$%\nt//t\n/*t\nt*/ ?}", ['t' => 'test']));
+		$this->assertEquals('test', Template::buildStr("{{ // t @#$%\nt//t\n/*t\nt*/ }}", ['t' => 'test']));
 	}
 
 	public function testStrings(){

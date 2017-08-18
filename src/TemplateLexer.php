@@ -444,14 +444,8 @@ class TemplateLexer {
 	}
 
 	public function nextToken_code(){
+		$this->skipSpacesAndComments();
 		$cpos = $this->cpos;
-
-		while ($cpos < $this->ilen && strpos("\r\n\t ", $this->input{$cpos}) !== false){
-			if ($this->input{$cpos} == "\n")
-				++$this->cline;
-			++$cpos;
-		}
-		$this->cpos = $cpos;
 
 		if ($cpos >= $this->ilen){
 			$this->token = '';
@@ -623,6 +617,53 @@ class TemplateLexer {
 
 			return true;
 		}
+	}
+
+	private function skipSpacesAndComments(){
+		$cpos = $this->cpos;
+		while ($cpos < $this->ilen){
+			while ($cpos < $this->ilen && strpos("\r\n\t ", $this->input{$cpos}) !== false){
+				if ($this->input{$cpos} == "\n")
+					++$this->cline;
+				++$cpos;
+			}
+
+			if ($cpos + 1 < $this->ilen && $this->input{$cpos} == '/'){
+				if ($this->input{$cpos + 1} == '/'){
+					$cpos += 2;
+					while ($cpos < $this->ilen){
+						if ($this->input{$cpos} == "\n"){
+							++$this->cline;
+							++$cpos;
+							if ($this->input{$cpos} == "\r"){
+								++$cpos;
+							}
+							break;
+						}
+						++$cpos;
+					}
+				}
+				else if ($this->input{$cpos + 1} == '*'){
+					$cpos += 2;
+					while ($cpos < $this->ilen){
+						if ($this->input{$cpos} == "\n"){
+							++$this->cline;
+						}
+						else if ($this->input{$cpos} == '*' && $cpos + 1 < $this->ilen && $this->input{$cpos + 1} == '/'){
+							$cpos += 2;
+							break;
+						}
+						++$cpos;
+					}
+				}
+				else {
+					break;
+				}
+			} else {
+				break;
+			}
+		}
+		$this->cpos = $cpos;
 	}
 
 	public function error($msg){
