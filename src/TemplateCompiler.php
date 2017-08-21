@@ -92,13 +92,25 @@ class TemplateCompiler {
 
 							$this->parse();
 
+							$pgm[] = $this->pgm;
+							$this->pgm = $oldpgm;
+
+							if ($this->lexer->isToken(TemplateLexer::TOK_ID, 'else')){
+								if (!$this->lexer->nextToken()){
+									$this->lexer->error('Expected else action in "for"');
+								}
+								$oldpgm = $this->pgm;
+								$this->pgm = [];
+								$this->parse();
+
+								$pgm[] = $this->pgm;
+								$this->pgm = $oldpgm;
+							}
+
 							if (!$this->lexer->isToken(TemplateLexer::TOK_ID, 'end')){
 								$this->lexer->error('Expected "end" in "for"');
 							}
 							$this->lexer->nextToken();
-
-							$pgm[] = $this->pgm;
-							$this->pgm = $oldpgm;
 							$this->pgm[] = $pgm;
 						} else {
 							$this->lexer->error('Identifier expected after "for"');

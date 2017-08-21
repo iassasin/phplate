@@ -7,7 +7,7 @@ end ?}
 ```
 ```
 {* форма 2 *}
-{? for <var> = <expression1> while <condition> step <expression2>;
+{? for <var> = <expression1> while <condition> next <expression2>;
 	<body>
 end ?}
 ```
