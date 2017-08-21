@@ -11,6 +11,7 @@ class TemplateOptions {
 	const OPTION_DATE_FORMAT = 1;
 	const OPTION_CACHE_ENABLED = 2;
 	const OPTION_AUTO_SAFE = 3;
+	const OPTION_EXTENSION = 4;
 
 	protected $options = [];
 
@@ -18,6 +19,7 @@ class TemplateOptions {
 		$this->options[self::OPTION_DATE_FORMAT] = 'Y-m-d H:i:s';
 		$this->options[self::OPTION_CACHE_ENABLED] = true;
 		$this->options[self::OPTION_AUTO_SAFE] = true;
+		$this->options[self::OPTION_EXTENSION] = 'html';
 	}
 
 	public function getDateFormat(): string {
@@ -62,6 +64,16 @@ class TemplateOptions {
 	 */
 	public function setAutoSafeEnabled(bool $enabled): self {
 		$this->options[self::OPTION_AUTO_SAFE] = $enabled;
+
+		return $this;
+	}
+
+	public function getExtension(): string {
+		return $this->options[self::OPTION_EXTENSION];
+	}
+
+	public function setExtension(string $ext): self {
+		$this->options[self::OPTION_EXTENSION] = $ext;
 
 		return $this;
 	}
