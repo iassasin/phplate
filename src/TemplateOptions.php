@@ -11,6 +11,7 @@ class TemplateOptions {
 	const OPTION_DATE_FORMAT = 1;
 	const OPTION_CACHE_ENABLED = 2;
 	const OPTION_AUTO_SAFE = 3;
+	const OPTION_CACHE_DIR = 5;
 
 	protected $options = [];
 
