@@ -41,9 +41,6 @@ class TemplateEngine {
 	}
 
 	public function addUserFunctionHandler(string $name, callable $f){
-		if ($this->userFunctions->has($name)){
-			throw new \RuntimeException("Функция с именем \"{$name}\" уже была добавлена.");
-		}
 		$this->userFunctions->add($name, $f);
 	}
 
