@@ -12,6 +12,7 @@ use Iassasin\Phplate\TemplateEngine;
 use PHPUnit\Framework\TestCase;
 
 /**
+ * @covers \Iassasin\Phplate\Template
  * @covers \Iassasin\Phplate\TemplateEngine
  * @covers \Iassasin\Phplate\TemplateOptions
  * @covers \Iassasin\Phplate\PipeFunctionsContainer
@@ -35,10 +36,12 @@ class TemplateEngineTest extends TestCase {
 		$this->assertContains('Error', $result);
 	}
 
-	public function testCannotOverridePipeFunction(){
-		$this->expectException(\RuntimeException::class);
+	public function testOverridingPipeFunctions(){
 		self::$e->addUserFunctionHandler('raw', function (){
+			return 'test';
 		});
+		$this->assertNotEquals('hello', $res = self::$e->buildStr("{{ 'hello'|raw }}", []));
+		$this->assertEquals('test', $res);
 	}
 
 	public function testInvalidTpl(){
