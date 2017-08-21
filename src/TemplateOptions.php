@@ -19,6 +19,7 @@ class TemplateOptions {
 		$this->options[self::OPTION_DATE_FORMAT] = 'Y-m-d H:i:s';
 		$this->options[self::OPTION_CACHE_ENABLED] = true;
 		$this->options[self::OPTION_AUTO_SAFE] = true;
+		$this->options[self::OPTION_CACHE_DIR] = getcwd();
 	}
 
 	public function getDateFormat(): string {
@@ -58,11 +59,32 @@ class TemplateOptions {
 	}
 
 	/**
-	 * @param $enabled
+	 * @param bool $enabled
 	 * @return self
 	 */
 	public function setAutoSafeEnabled(bool $enabled): self {
 		$this->options[self::OPTION_AUTO_SAFE] = $enabled;
+
+		return $this;
+	}
+
+	/**
+	 * @return string path without ending "/"
+	 */
+	public function getCacheDir(): string {
+		return rtrim($this->options[self::OPTION_CACHE_DIR], '/');
+	}
+
+	/**
+	 * @param string $dir
+	 * @return TemplateOptions
+	 * @throws \InvalidArgumentException
+	 */
+	public function setCacheDir(string $dir): self {
+		if (!file_exists($dir) || !is_dir($dir)) {
+			throw new \InvalidArgumentException('Invalid cache directory "' . $dir . '": directory does not exists.');
+		}
+		$this->options[self::OPTION_CACHE_DIR] = $dir;
 
 		return $this;
 	}
