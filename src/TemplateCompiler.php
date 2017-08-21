@@ -52,39 +52,39 @@ class TemplateCompiler {
 							$pgm[] = $this->lexer->token;
 
 							if (!$this->lexer->nextToken()){
-								$this->lexer->error('Excepted "in" or "=" in "for"');
+								$this->lexer->error('Expected "in" or "=" in "for"');
 							}
 
 							if ($this->lexer->isToken(TemplateLexer::TOK_ID, 'in')){
 								if (!$this->lexer->nextToken()){
-									$this->lexer->error('Excepted array in "for"');
+									$this->lexer->error('Expected array in "for"');
 								}
 								$pgm[] = $this->lexer->parseExpression();
 							} else if ($this->lexer->isToken(TemplateLexer::TOK_OP, '=')){
 								$pgm[0] = 'for';
 
 								if (!$this->lexer->nextToken()){
-									$this->lexer->error('Excepted initializer in "for"');
+									$this->lexer->error('Expected initializer in "for"');
 								}
 								$pgm[] = $this->lexer->parseExpression();
 
 								if (!$this->lexer->isToken(TemplateLexer::TOK_ID, 'while')){
-									$this->lexer->error('Excepted "while" in "for"');
+									$this->lexer->error('Expected "while" in "for"');
 								}
 								if (!$this->lexer->nextToken()){
-									$this->lexer->error('Excepted condition in "for"');
+									$this->lexer->error('Expected condition in "for"');
 								}
 								$pgm[] = $this->lexer->parseExpression();
 
 								if (!$this->lexer->isToken(TemplateLexer::TOK_ID, 'next')){
-									$this->lexer->error('Excepted "next" in "for"');
+									$this->lexer->error('Expected "next" in "for"');
 								}
 								if (!$this->lexer->nextToken()){
-									$this->lexer->error('Excepted post-iteration action in "for"');
+									$this->lexer->error('Expected post-iteration action in "for"');
 								}
 								$pgm[] = $this->lexer->parseExpression();
 							} else {
-								$this->lexer->error('Excepted "in" or "=" in "for"');
+								$this->lexer->error('Expected "in" or "=" in "for"');
 							}
 
 							$oldpgm = $this->pgm;
@@ -93,7 +93,7 @@ class TemplateCompiler {
 							$this->parse();
 
 							if (!$this->lexer->isToken(TemplateLexer::TOK_ID, 'end')){
-								$this->lexer->error('Excepted "end" in "for"');
+								$this->lexer->error('Expected "end" in "for"');
 							}
 							$this->lexer->nextToken();
 
@@ -101,7 +101,7 @@ class TemplateCompiler {
 							$this->pgm = $oldpgm;
 							$this->pgm[] = $pgm;
 						} else {
-							$this->lexer->error('Identifier excepted after "for"');
+							$this->lexer->error('Identifier expected after "for"');
 						}
 						break;
 
@@ -114,7 +114,7 @@ class TemplateCompiler {
 							|| !($this->lexer->toktype == TemplateLexer::TOK_ID
 								|| $this->lexer->toktype == TemplateLexer::TOK_STR)
 						){
-							$this->lexer->error('Excepted including template name');
+							$this->lexer->error('Expected including template name');
 						}
 
 						$pgm[] = $this->lexer->token;
@@ -150,7 +150,7 @@ class TemplateCompiler {
 							$bname = $this->lexer->token;
 
 							if (!$this->lexer->nextToken()){
-								$this->lexer->error('Excepted "end" for "block"');
+								$this->lexer->error('Expected "end" for "block"');
 							}
 
 							$oldpgm = $this->pgm;
@@ -158,7 +158,7 @@ class TemplateCompiler {
 							$this->parse();
 
 							if (!$this->lexer->isToken(TemplateLexer::TOK_ID, 'end')){
-								$this->lexer->error('Excepted "end" in "block"');
+								$this->lexer->error('Expected "end" in "block"');
 							}
 							$this->lexer->nextToken();
 
@@ -166,7 +166,7 @@ class TemplateCompiler {
 							$this->pgm = $oldpgm;
 							$this->pgm[] = $pgm;
 						} else {
-							$this->lexer->error('Excepted block name');
+							$this->lexer->error('Expected block name');
 						}
 						break;
 
@@ -175,7 +175,7 @@ class TemplateCompiler {
 							$wname = $this->lexer->token;
 
 							if (!$this->lexer->nextToken()){
-								$this->lexer->error('Excepted "end" for "widget"');
+								$this->lexer->error('Expected "end" for "widget"');
 							}
 
 							$oldpgm = $this->pgm;
@@ -183,7 +183,7 @@ class TemplateCompiler {
 							$this->parse();
 
 							if (!$this->lexer->isToken(TemplateLexer::TOK_ID, 'end')){
-								$this->lexer->error('Excepted "end" in "widget"');
+								$this->lexer->error('Expected "end" in "widget"');
 							}
 							$this->lexer->nextToken();
 
@@ -191,7 +191,7 @@ class TemplateCompiler {
 							$this->pgm = $oldpgm;
 							$this->pgm[] = $pgm;
 						} else {
-							$this->lexer->error('Excepted widget name');
+							$this->lexer->error('Expected widget name');
 						}
 						break;
 
@@ -220,7 +220,7 @@ class TemplateCompiler {
 				$this->pgm = [];
 
 				if (!$this->lexer->nextToken()){
-					$this->lexer->error('Excepted "end" for "if"');
+					$this->lexer->error('Expected "end" for "if"');
 				}
 
 				$this->lastop = true;
@@ -236,12 +236,12 @@ class TemplateCompiler {
 				} else {
 					$this->parse();
 					if (!$this->lexer->isToken(TemplateLexer::TOK_ID, 'end')){
-						$this->lexer->error('Excepted "end" for "if"');
+						$this->lexer->error('Expected "end" for "if"');
 					}
 					$pgm[] = $this->pgm;
 				}
 			} else if (!$this->lexer->isToken(TemplateLexer::TOK_ID, 'end')){
-				$this->lexer->error('Excepted "end" for "if"');
+				$this->lexer->error('Expected "end" for "if"');
 			} else {
 				$pgm[] = $this->pgm;
 				$pgm[] = [];
@@ -251,7 +251,7 @@ class TemplateCompiler {
 
 			$this->lexer->nextToken();
 		} else {
-			$this->lexer->error('Excepted condition in "if"');
+			$this->lexer->error('Expected condition in "if"');
 		}
 	}
 
@@ -280,7 +280,7 @@ class TemplateCompiler {
 
 						case '}}':
 							if ($this->endesc != $this->lexer->token){
-								$this->lexer->error('Excepted ' . $this->endesc . ', but }} found');
+								$this->lexer->error('Expected ' . $this->endesc . ', but }} found');
 							}
 							$this->endesc = '';
 
@@ -289,7 +289,7 @@ class TemplateCompiler {
 
 						case '?}':
 							if ($this->endesc != $this->lexer->token){
-								$this->lexer->error('Excepted ' . $this->endesc . ', but ?} found');
+								$this->lexer->error('Expected ' . $this->endesc . ', but ?} found');
 							}
 							$this->endesc = '';
 
@@ -311,14 +311,14 @@ class TemplateCompiler {
 								!($this->lexer->isToken(TemplateLexer::TOK_ESC, '>>')
 								|| $this->lexer->isToken(TemplateLexer::TOK_ESC, '/>>'))
 							){
-								$this->lexer->error('Excepted >>');
+								$this->lexer->error('Expected >>');
 							}
 							$this->lexer->nextToken();
 							$this->lastop = false;
 							break;
 
 						default:
-							$this->lexer->error('Unexcepted escape: ' . $this->lexer->token);
+							$this->lexer->error('Unexpected escape: ' . $this->lexer->token);
 							break;
 					}
 					break;
@@ -387,7 +387,7 @@ class TemplateCompiler {
 				$autoclose = $this->lexer->isToken(TemplateLexer::TOK_ESC, '/>>');
 
 				if (!$autoclose && !$this->lexer->isToken(TemplateLexer::TOK_ESC, '>>')){
-					$this->lexer->error('Excepted >>');
+					$this->lexer->error('Expected >>');
 				}
 
 				if ($autoclose){
@@ -402,12 +402,12 @@ class TemplateCompiler {
 					$this->pgm = $oldpgm;
 
 					if (!$this->lexer->isToken(TemplateLexer::TOK_OP, '/')){
-						$this->lexer->error('Excepted end of widget');
+						$this->lexer->error('Expected end of widget');
 					}
 
 					$this->lexer->nextToken();
 					if (!$this->lexer->isToken(TemplateLexer::TOK_ID, $wname)){
-						$this->lexer->error('Invalid end widget name, excepted "' . $wname . '"');
+						$this->lexer->error('Invalid end widget name, expected "' . $wname . '"');
 					}
 
 					$this->lexer->nextToken();

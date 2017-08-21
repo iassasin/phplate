@@ -67,7 +67,7 @@ class TemplateLexer {
 			10 => [
 				'|' => function (TemplateLexer $parser, $val, $lvl){
 					if (!$parser->nextToken() || $parser->toktype != self::TOK_ID){
-						$parser->error('Function name excepted in "|"');
+						$parser->error('Function name expected in "|"');
 					}
 
 					$fname = $parser->token;
@@ -81,7 +81,7 @@ class TemplateLexer {
 							} while ($parser->toktype == self::TOK_OP && $parser->token == ',');
 
 							if ($parser->toktype != self::TOK_OP || $parser->token != ')'){
-								$parser->error('Excepted ")" in pipe-function call');
+								$parser->error('Expected ")" in pipe-function call');
 							}
 
 							$parser->nextToken();
@@ -93,13 +93,13 @@ class TemplateLexer {
 
 				'[' => function (TemplateLexer $parser, $val, $lvl){
 					if (!$parser->nextToken()){
-						$parser->error('Argument excepted in "["');
+						$parser->error('Argument expected in "["');
 					}
 
 					$arg = $parser->infix(1);
 
 					if ($parser->toktype != self::TOK_OP || $parser->token != ']'){
-						$parser->error('Excepted "]"');
+						$parser->error('Expected "]"');
 					}
 
 					$parser->nextToken();
@@ -120,7 +120,7 @@ class TemplateLexer {
 					}
 
 					if (!$parser->isToken(self::TOK_OP, ')')){
-						$parser->error('Excepted ")" in function call');
+						$parser->error('Expected ")" in function call');
 					}
 
 					$parser->nextToken();
@@ -168,7 +168,7 @@ class TemplateLexer {
 			}
 
 			if (!$this->nextToken()){
-				$this->error('Unexcepted end of file. Operator excepted.');
+				$this->error('Unexpected end of file. Operator expected.');
 			}
 
 			if (is_callable($oplvl[1])){
@@ -190,7 +190,7 @@ class TemplateLexer {
 				$op = $this->token;
 				if ($op == '#'){ //block
 					if (!$this->nextToken() || $this->toktype != self::TOK_ID){
-						$this->error('Block name excepted');
+						$this->error('Block name expected');
 					}
 
 					$bname = $this->token;
@@ -204,7 +204,7 @@ class TemplateLexer {
 							} while ($this->toktype == self::TOK_OP && $this->token == ',');
 
 							if ($this->toktype != self::TOK_OP || $this->token != ')'){
-								$this->error('Excepted ")"');
+								$this->error('Expected ")"');
 							}
 
 							$this->nextToken();
@@ -216,13 +216,13 @@ class TemplateLexer {
 					return $this->postfix($lvl, $val);
 				} else if ($op == '('){
 					if (!$this->nextToken()){
-						$this->error('Argument excepted in "("');
+						$this->error('Argument expected in "("');
 					}
 
 					$val = $this->infix(1);
 
 					if ($this->toktype != self::TOK_OP || $this->token != ')'){
-						$this->error('Excepted ")"');
+						$this->error('Expected ")"');
 					}
 
 					$this->nextToken();
@@ -245,12 +245,12 @@ class TemplateLexer {
 				} else {
 					$oplvl = $this->findOperator(self::$PRE_OPS, $lvl, $op);
 					if ($oplvl == null){
-						$this->error('Unexcepted operator "' . $this->token . '"');
+						$this->error('Unexpected operator "' . $this->token . '"');
 						// break;
 					}
 
 					if (!$this->nextToken()){
-						$this->error('Unexcepted end of file. Excepted identificator or expression');
+						$this->error('Unexpected end of file. Expected identificator or expression');
 						// break;
 					}
 
@@ -297,7 +297,7 @@ class TemplateLexer {
 				return $this->postfix($lvl, $res);
 
 			case self::TOK_NONE:
-				$this->error('Unexcepted end of file');
+				$this->error('Unexpected end of file');
 				// break;
 
 			default:
@@ -310,7 +310,7 @@ class TemplateLexer {
 
 	public function parseInlineArray($lvl){
 		if (!$this->nextToken()){
-			$this->error('Expression or "]" excepted after "["');
+			$this->error('Expression or "]" expected after "["');
 		}
 
 		$vals = [];
@@ -321,7 +321,7 @@ class TemplateLexer {
 			$val = $this->infix(1);
 			if ($this->isToken(self::TOK_OP, '=>')){
 				if ($val[0] != 'r'){
-					$this->error('Excepted constant for key in array');
+					$this->error('Expected constant for key in array');
 				}
 
 				$key = $val[1];
@@ -338,7 +338,7 @@ class TemplateLexer {
 		}
 
 		if (!$this->isToken(self::TOK_OP, ']')){
-			$this->error('Excepted "]" for inline array');
+			$this->error('Expected "]" for inline array');
 		}
 
 		$this->nextToken();
@@ -510,7 +510,7 @@ class TemplateLexer {
 			}
 
 			if ($cpos >= $this->ilen || $this->input{$cpos} != $esym){
-				$this->error('Excepted ' . $esym);
+				$this->error('Expected ' . $esym);
 			}
 
 			$this->toktype = self::TOK_STR;
