@@ -8,6 +8,7 @@
 
 namespace Iassasin\Phplate\Tests;
 
+use Iassasin\Phplate\Template;
 use Iassasin\Phplate\TemplateEngine;
 use PHPUnit\Framework\TestCase;
 
@@ -40,8 +41,11 @@ class TemplateEngineTest extends TestCase {
 		self::$e->addUserFunctionHandler('raw', function (){
 			return 'test';
 		});
+		// тестируем переопределенную функцию
 		$this->assertNotEquals('hello', $res = self::$e->buildStr("{{ 'hello'|raw }}", []));
 		$this->assertEquals('test', $res);
+		// тестируем пайп-функцию из нового контейнера ("восстановленная")
+		$this->assertEquals('hello', Template::init('.')->buildStr("{{ 'hello'|raw }}", []));
 	}
 
 	public function testInvalidTpl(){
