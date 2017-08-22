@@ -19,7 +19,7 @@ class TemplateOptions {
 		$this->options[self::OPTION_DATE_FORMAT] = 'Y-m-d H:i:s';
 		$this->options[self::OPTION_CACHE_ENABLED] = true;
 		$this->options[self::OPTION_AUTO_SAFE] = true;
-		$this->options[self::OPTION_CACHE_DIR] = getcwd();
+		$this->options[self::OPTION_CACHE_DIR] = realpath('.');
 	}
 
 	public function getDateFormat(): string {

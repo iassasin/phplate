@@ -18,7 +18,7 @@ class TemplateEngine {
 	private $userFunctions;
 	private $tplCache = [];
 
-	public static function instance(): self{
+	public static function instance(): self {
 		return self::$instance ?? self::$instance = new self('./', new TemplateOptions());
 	}
 
@@ -88,9 +88,10 @@ class TemplateEngine {
 			$path = dirname($includeFrom) . '/';
 		}
 		$tpath = realpath($path . $tplName . '.html');
-		$relative = str_replace(getcwd(), '', $tpath); // получаем путь от корня проекта
-		$cacheName = md5($relative);
-		$tcpath = sprintf('%s/%s-%s.ctpl', $this->options->getCacheDir(), $tplName, $cacheName);
+		$relative = substr($tpath, strlen(realpath($this->tplPath))); // получаем относительный путь от папки с шаблонами
+		$hash = md5($relative);
+		$cacheName = basename($tplName);
+		$tcpath = sprintf('%s/%s-%s.ctpl', $this->options->getCacheDir(), $cacheName, $hash);
 
 		if ($this->options->getCacheEnabled() && file_exists($tcpath)){
 			if (!file_exists($tpath) || filemtime($tcpath) >= filemtime($tpath)){
