@@ -275,20 +275,29 @@ class TemplateTest extends TestCase {
 	}
 
 	public function testForCycleWithElseBlock(){
-		$tpl = '{? for i in [] 1 else 2 end ?}';
+		$tpl = '{? for i in []; 1 else 2 end ?}';
 		$data = Template::buildStr($tpl, []);
 		$this->assertEquals('2', $data);
 
-		$tpl = '{? for i in [1] 1 else 2 end ?}';
+		$tpl = '{? for i in [1]; 1 else 2 end ?}';
 		$data = Template::buildStr($tpl, []);
 		$this->assertEquals('1', $data);
 
-		$tpl = '{? for i=0 while i<0 next i=i+1 1 else 2 end ?}';
+		$tpl = '{? for i=0 while i<0 next i=i+1; 1 else 2 end ?}';
 		$data = Template::buildStr($tpl, []);
 		$this->assertEquals('2', $data);
 
-		$tpl = '{? for i=0 while i<1 next i=i+1 1 else 2 end ?}';
+		$tpl = '{? for i=0 while i<1 next i=i+1; 1 else 2 end ?}';
 		$data = Template::buildStr($tpl, []);
 		$this->assertEquals('1', $data);
+
+		// without else
+		$tpl = '{? for i in []; 1 end ?}';
+		$data = Template::buildStr($tpl, []);
+		$this->assertEquals('', $data);
+
+		$tpl = '{? for i in [1,2]; 1 end ?}';
+		$data = Template::buildStr($tpl, []);
+		$this->assertEquals('11', $data);
 	}
 }

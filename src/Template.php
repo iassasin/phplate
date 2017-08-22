@@ -148,7 +148,7 @@ class Template {
 							$this->values[$k] = $val;
 							$this->execPgm($ins[3]);
 						}
-					} elseif (isset($ins[4])) {
+					} else {
 						$this->execPgm($ins[4]);
 					}
 					break;
@@ -156,12 +156,13 @@ class Template {
 				case 'for':
 					$this->values[$ins[1]] = $this->readValue($ins[2]);
 					$i = 0;
-					while ($this->readValue($ins[3])){
-						$this->execPgm($ins[5]);
-						$this->readValue($ins[4]);
-						$i++;
-					}
-					if (!$i){
+					if ($this->readValue($ins[3])){
+						do {
+							$this->execPgm($ins[5]);
+							$this->readValue($ins[4]);
+						}
+						while ($this->readValue($ins[3]));
+					} else {
 						$this->execPgm($ins[6]);
 					}
 					break;
