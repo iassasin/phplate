@@ -84,7 +84,7 @@ class TemplateEngine {
 		if (null !== $includeFrom && '' !== $includeFrom && '/' !== $tplName{0}){
 			$path = dirname($includeFrom) . '/';
 		}
-		$tpath = $path . $tplName . '.html';
+		$tpath = $path . $tplName . '.' . $this->options->getTemplateFileExtension();
 		$tcpath = $path . $tplName . '.ctpl';
 
 		if ($this->options->getCacheEnabled() && file_exists($tcpath)){
@@ -119,7 +119,7 @@ class TemplateEngine {
 
 				return $p;
 			} catch (\Exception $e){
-				return 'Error: ' . $tplName . '.html, ' . $e->getMessage();
+				return 'Error: ' . $tplName . '.' . $this->options->getTemplateFileExtension() . ', ' . $e->getMessage();
 			}
 		}
 

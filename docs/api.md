@@ -19,24 +19,7 @@ public static function Template::init($tplpath, TemplateOptions $options = null)
 В классе `TemplateEngine` доступны все те же методы API, что и в `Template`, но как нестатичные методы класса.  
 Важно отметить, что *API* всегда работает именно с теми настройками, которые были переданы в `Template::init` перед использованием *API*.
 
-`TemplateOptions` содержит следующие методы:
-- `getDateFormat()` и `setDateFormat(string $format)`
-  - Управление форматом по-умолчанию для пайп-функции `date`
-  - Значение по-умолчанию: `Y-m-d H:i:s`
-- `getCacheEnabled()` и `setCacheEnabled(boolean $value)`
-  - Управление кэшированием результата компиляции шаблона (в файлы .ctpl)
-  - Значение по-умолчанию: `true`
-- `getAutoSafeEnabled()` и `setAutoSafeEnabled(boolean $value)`
-  - Управление автоматическим применением пайп-функции `safe` для всего вывода в [блоке аргументов](syntax.md)
-  - Значение по-умолчанию: `true`
-
-Пример настройки:
-```php
-Template::init($_SERVER['DOCUMENT_ROOT'].'/templates/', (new TemplateOptions)
-    ->setCacheEnabled(true)
-    ->setAutoSafeEnabled(true)
-);
-```
+Доступные опции и пример настройки смотрите в статье [настройки Phplate](options.md)
 
 ---
 
