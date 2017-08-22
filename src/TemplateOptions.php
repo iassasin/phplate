@@ -12,6 +12,7 @@ class TemplateOptions {
 	const OPTION_CACHE_ENABLED = 2;
 	const OPTION_AUTO_SAFE = 3;
 	const OPTION_EXTENSION = 4;
+	const OPTION_CACHE_DIR = 5;
 
 	protected $options = [];
 
@@ -68,11 +69,11 @@ class TemplateOptions {
 		return $this;
 	}
 
-	public function getExtension(): string {
+	public function getTemplateFileExtension(): string {
 		return $this->options[self::OPTION_EXTENSION];
 	}
 
-	public function setExtension(string $ext): self {
+	public function setTemplateFileExtension(string $ext): self {
 		$this->options[self::OPTION_EXTENSION] = $ext;
 
 		return $this;
