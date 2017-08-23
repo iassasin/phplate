@@ -148,14 +148,21 @@ class Template {
 							$this->values[$k] = $val;
 							$this->execPgm($ins[3]);
 						}
+					} else {
+						$this->execPgm($ins[4]);
 					}
 					break;
 
 				case 'for':
 					$this->values[$ins[1]] = $this->readValue($ins[2]);
-					while ($this->readValue($ins[3])){
-						$this->execPgm($ins[5]);
-						$this->readValue($ins[4]);
+					if ($this->readValue($ins[3])){
+						do {
+							$this->execPgm($ins[5]);
+							$this->readValue($ins[4]);
+						}
+						while ($this->readValue($ins[3]));
+					} else {
+						$this->execPgm($ins[6]);
 					}
 					break;
 
@@ -208,8 +215,8 @@ class Template {
 	 * ['if', $var, $body_true, $body_false]
 	 * ['incl', $tpl, $isarr, [$arg1, $arg2, ...]]
 	 * ['inclo', $tpl, $isarr, [$arg1, $arg2, ...]]
-	 * ['fore', $i, $var, $body]
-	 * ['for', $i, $init, $cond, $post, $body]
+	 * ['fore', $i, $var, $body, $elsebody]
+	 * ['for', $i, $init, $cond, $post, $body, $elsebody]
 	 * ['regb', $name, $body]
 	 * ['regw', $name, $wbody]
 	 * ['widg', $name, $attrs, $body]
