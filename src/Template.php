@@ -155,7 +155,6 @@ class Template {
 
 				case 'for':
 					$this->values[$ins[1]] = $this->readValue($ins[2]);
-					$i = 0;
 					if ($this->readValue($ins[3])){
 						do {
 							$this->execPgm($ins[5]);

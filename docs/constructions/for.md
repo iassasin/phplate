@@ -23,7 +23,7 @@ end ?}
 ```
 {? for msg in messages ?}
 	<div>{{msg.author}}: {{msg.text}}</div>
-else
+{? else ?}
     <div>Сообщений нет</div>
 {? end ?}
 ```
@@ -36,7 +36,7 @@ else
 ```
 {? for i = 0 while i < 5 next i += 1 ?}
 	<div>Элемент {{i}}: {{elements[i]}}</div>
-else
+{? else ?}
     <div>Элементов нет</div>
 {? end ?}
 ```
