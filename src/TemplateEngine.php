@@ -41,9 +41,6 @@ class TemplateEngine {
 	}
 
 	public function addUserFunctionHandler(string $name, callable $f){
-		if ($this->userFunctions->has($name)){
-			throw new \RuntimeException("Функция с именем \"{$name}\" уже была добавлена.");
-		}
 		$this->userFunctions->add($name, $f);
 	}
 
@@ -87,7 +84,8 @@ class TemplateEngine {
 		if (null !== $includeFrom && '' !== $includeFrom && '/' !== $tplName{0}){
 			$path = dirname($includeFrom) . '/';
 		}
-		$tpath = realpath($path . $tplName . '.html');
+		
+		$tpath = realpath($path . $tplName . '.' . $this->options->getTemplateFileExtension());
 		$relative = substr($tpath, strlen(realpath($this->tplPath))); // получаем относительный путь от папки с шаблонами
 		$hash = md5($relative);
 		$cacheName = basename($tplName);
@@ -125,7 +123,7 @@ class TemplateEngine {
 
 				return $p;
 			} catch (\Exception $e){
-				return 'Error: ' . $tplName . '.html, ' . $e->getMessage();
+				return 'Error: ' . $tplName . '.' . $this->options->getTemplateFileExtension() . ', ' . $e->getMessage();
 			}
 		}
 
