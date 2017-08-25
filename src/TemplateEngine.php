@@ -22,7 +22,7 @@ class TemplateEngine {
 		return self::$instance ?? self::$instance = new self('./', new TemplateOptions());
 	}
 
-	public static function init($tplPath, TemplateOptions $options = null) {
+	public static function init($tplPath, TemplateOptions $options = null){
 		return self::$instance = new self($tplPath, $options ?: new TemplateOptions());
 	}
 
@@ -84,23 +84,35 @@ class TemplateEngine {
 		if (null !== $includeFrom && '' !== $includeFrom && '/' !== $tplName{0}){
 			$path = dirname($includeFrom) . '/';
 		}
-		$tpath = $path . $tplName . '.' . $this->options->getTemplateFileExtension();
-		$tcpath = $path . $tplName . '.ctpl';
 
-		if ($this->options->getCacheEnabled() && file_exists($tcpath)){
-			if (!file_exists($tpath) || filemtime($tcpath) >= filemtime($tpath)){
-				$pgm = json_decode(file_get_contents($tcpath), true);
-				if ($pgm !== false){
-					$p = new Template($tpath, $pgm, $this->globalVars);
-					$this->tplCache[$tpath] = $p;
+		$tplNameExt = $tplName . '.' . $this->options->getTemplateFileExtension();
 
-					return $p;
+		$tpath = realpath($path . $tplNameExt);
+
+		if ($this->options->getCacheEnabled()){
+			$cachedir = $this->options->getCacheDir();
+
+			if ($cachedir === ''){
+				$tcpath = $path . $tplName . '.ctpl';
+			} else {
+				$tcpath = sprintf('%s/%s-%s.ctpl', $cachedir, basename($tplNameExt), md5($tpath));
+			}
+
+			if (file_exists($tcpath)){
+				if (!file_exists($tpath) || filemtime($tcpath) >= filemtime($tpath)){
+					$pgm = json_decode(file_get_contents($tcpath), true);
+					if ($pgm !== false){
+						$p = new Template($tpath, $pgm, $this->globalVars);
+						$this->tplCache[$tpath] = $p;
+
+						return $p;
+					}
 				}
 			}
 		}
 
 		if (file_exists($tpath)){
-			try{
+			try {
 				$p = null;
 				if (array_key_exists($tpath, $this->tplCache)){
 					$p = $this->tplCache[$tpath];
