@@ -85,20 +85,28 @@ class TemplateEngine {
 			$path = dirname($includeFrom) . '/';
 		}
 
-		$tpath = realpath($path . $tplName . '.' . $this->options->getTemplateFileExtension());
-		$relative = substr($tpath, strlen(realpath($this->tplPath))); // получаем относительный путь от папки с шаблонами
-		$hash = md5($relative);
-		$cacheName = basename($tplName);
-		$tcpath = sprintf('%s/%s-%s.ctpl', $this->options->getCacheDir(), $cacheName, $hash);
+		$tplNameExt = $tplName . '.' . $this->options->getTemplateFileExtension();
 
-		if ($this->options->getCacheEnabled() && file_exists($tcpath)){
-			if (!file_exists($tpath) || filemtime($tcpath) >= filemtime($tpath)){
-				$pgm = json_decode(file_get_contents($tcpath), true);
-				if ($pgm !== false){
-					$p = new Template($tpath, $pgm, $this->globalVars);
-					$this->tplCache[$tpath] = $p;
+		$tpath = realpath($path . $tplNameExt);
 
-					return $p;
+		if ($this->options->getCacheEnabled()){
+			$cachedir = $this->options->getCacheDir();
+
+			if ($cachedir === ''){
+				$tcpath = $path . $tplName . '.ctpl';
+			} else {
+				$tcpath = sprintf('%s/%s-%s.ctpl', $cachedir, basename($tplNameExt), md5($tpath));
+			}
+
+			if (file_exists($tcpath)){
+				if (!file_exists($tpath) || filemtime($tcpath) >= filemtime($tpath)){
+					$pgm = json_decode(file_get_contents($tcpath), true);
+					if ($pgm !== false){
+						$p = new Template($tpath, $pgm, $this->globalVars);
+						$this->tplCache[$tpath] = $p;
+
+						return $p;
+					}
 				}
 			}
 		}

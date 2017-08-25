@@ -21,7 +21,7 @@ class TemplateOptions {
 		$this->options[self::OPTION_CACHE_ENABLED] = true;
 		$this->options[self::OPTION_AUTO_SAFE] = true;
 		$this->options[self::OPTION_EXTENSION] = 'html';
-		$this->options[self::OPTION_CACHE_DIR] = realpath('.');
+		$this->options[self::OPTION_CACHE_DIR] = '';
 	}
 
 	public function getDateFormat(): string {
@@ -93,7 +93,7 @@ class TemplateOptions {
 	 * @throws \InvalidArgumentException
 	 */
 	public function setCacheDir(string $dir): self {
-		if (!file_exists($dir) || !is_dir($dir)) {
+		if ($dir !== '' && (!file_exists($dir) || !is_dir($dir))) {
 			throw new \InvalidArgumentException('Invalid cache directory "' . $dir . '": directory does not exists.');
 		}
 		$this->options[self::OPTION_CACHE_DIR] = $dir;
