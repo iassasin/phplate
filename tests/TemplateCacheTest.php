@@ -19,7 +19,7 @@ use PHPUnit\Framework\TestCase;
  */
 class TemplateCacheTest extends TestCase {
 	private static $cacheFileNoCacheDir = __DIR__ . '/resources/template_test.ctpl';
-	private static $cacheFileInCacheDir = __DIR__ . '/resources/cache/template_test.html-213832f0f0f9925fcb6f1346aba2961d.ctpl';
+	private static $cacheFileInCacheDir;
 
 	private static function cleanFile($file){
 		if (file_exists($file)){
@@ -33,6 +33,8 @@ class TemplateCacheTest extends TestCase {
 	}
 
 	public static function setUpBeforeClass(){
+		self::$cacheFileInCacheDir = __DIR__ . '/resources/cache/template_test.html-'
+			.md5(realpath(__DIR__ . '/resources/template_test.html')) .'.ctpl';
 		self::cleanCaches();
 	}
 
@@ -44,6 +46,7 @@ class TemplateCacheTest extends TestCase {
 		Template::init(__DIR__ . '/resources/', (new TemplateOptions())
 			->setCacheEnabled(true)
 			->setCacheDir('')
+			->setTemplateFileExtension('html')
 			->setAutoSafeEnabled(true)
 		);
 
@@ -62,6 +65,7 @@ class TemplateCacheTest extends TestCase {
 		Template::init(__DIR__ . '/resources/', (new TemplateOptions())
 			->setCacheEnabled(true)
 			->setCacheDir(__DIR__ . '/resources/cache')
+			->setTemplateFileExtension('html')
 			->setAutoSafeEnabled(true)
 		);
 
@@ -79,6 +83,7 @@ class TemplateCacheTest extends TestCase {
 	public function testCacheDisabled(){
 		Template::init(__DIR__ . '/resources/', (new TemplateOptions())
 			->setCacheEnabled(false)
+			->setTemplateFileExtension('html')
 			->setAutoSafeEnabled(false)
 		);
 
