@@ -32,11 +32,11 @@ class TemplateEngine {
 		$this->userFunctions = new PipeFunctionsContainer($options);
 	}
 
-	public function getOptions(): TemplateOptions{
+	public function getOptions(): TemplateOptions {
 		return $this->options;
 	}
 
-	public function getUserFunctions(): PipeFunctionsContainer{
+	public function getUserFunctions(): PipeFunctionsContainer {
 		return $this->userFunctions;
 	}
 
@@ -54,7 +54,7 @@ class TemplateEngine {
 	 * @param array $values - ассоциативный массив параметров вида ['arg' => 'val'] любой вложенности.
 	 * @return string
 	 */
-	public function build($tplName, array $values): string{
+	public function build($tplName, array $values): string {
 		$p = self::instance()->compile($tplName);
 		if (is_string($p)){
 			return $p;
@@ -70,7 +70,7 @@ class TemplateEngine {
 	 * @param array $values - ассоциативный массив параметров вида ['arg' => 'val'] любой вложенности.
 	 * @return string
 	 */
-	public function buildStr($tplStr, array $values): string{
+	public function buildStr($tplStr, array $values): string {
 		$c = new TemplateCompiler($this->options);
 		$c->compile($tplStr);
 		$p = new Template('', $c->getProgram(), $this->globalVars);
@@ -84,7 +84,7 @@ class TemplateEngine {
 		if (null !== $includeFrom && '' !== $includeFrom && '/' !== $tplName{0}){
 			$path = dirname($includeFrom) . '/';
 		}
-		
+
 		$tpath = realpath($path . $tplName . '.' . $this->options->getTemplateFileExtension());
 		$relative = substr($tpath, strlen(realpath($this->tplPath))); // получаем относительный путь от папки с шаблонами
 		$hash = md5($relative);
@@ -104,7 +104,7 @@ class TemplateEngine {
 		}
 
 		if (file_exists($tpath)){
-			try{
+			try {
 				$p = null;
 				if (array_key_exists($tpath, $this->tplCache)){
 					$p = $this->tplCache[$tpath];
