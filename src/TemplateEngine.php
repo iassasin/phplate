@@ -55,13 +55,12 @@ class TemplateEngine {
 	 * @return string
 	 */
 	public function build($tplName, array $values): string {
-		$p = self::instance()->compile($tplName);
-		if (is_string($p)){
-			return $p;
+		$p = $this->compile($tplName);
+		if ($p instanceof Template){
+			$p = $p->run($values)->getResult();
 		}
-		$p->run($values);
 
-		return $p->getResult();
+		return $p;
 	}
 
 	/**
@@ -79,25 +78,42 @@ class TemplateEngine {
 		return $p->getResult();
 	}
 
+	/**
+	 * Вставляет в шаблон $tplPath переменные из массива $values
+	 * @param string $tplPath - путь к файлу шаблона
+	 * @param array $values - ассоциативный массив параметров вида ['arg' => 'val'] любой вложенности.
+	 * @return string
+	 */
+	public function buildFile(string $tplPath, array $values): string {
+		try {
+			$p = $this
+				->compileFile($tplPath, $tplPath . '.ctpl')
+				->run($values)
+				->getResult()
+			;
+		} catch (\Exception $e){
+			$p = 'Error: ' . $tplPath . ', ' . $e->getMessage();
+		}
+
+		return $p;
+	}
+
 	public function compile(string $tplName, string $includeFrom = null){
+		$tplNameExt = $tplName . '.' . $this->options->getTemplateFileExtension();
 		$path = $this->tplPath;
 		if (null !== $includeFrom && '' !== $includeFrom && '/' !== $tplName{0}){
 			$path = dirname($includeFrom) . '/';
 		}
-
-		$tplNameExt = $tplName . '.' . $this->options->getTemplateFileExtension();
-
 		$tpath = realpath($path . $tplNameExt);
 
+		$cachedir = $this->options->getCacheDir();
+		if ($cachedir === ''){
+			$tcpath = $path . $tplName . '.ctpl';
+		} else {
+			$tcpath = sprintf('%s/%s-%s.ctpl', $cachedir, basename($tplNameExt), md5($tpath));
+		}
+
 		if ($this->options->getCacheEnabled()){
-			$cachedir = $this->options->getCacheDir();
-
-			if ($cachedir === ''){
-				$tcpath = $path . $tplName . '.ctpl';
-			} else {
-				$tcpath = sprintf('%s/%s-%s.ctpl', $cachedir, basename($tplNameExt), md5($tpath));
-			}
-
 			if (file_exists($tcpath)){
 				if (!file_exists($tpath) || filemtime($tcpath) >= filemtime($tpath)){
 					$pgm = json_decode(file_get_contents($tcpath), true);
@@ -111,30 +127,39 @@ class TemplateEngine {
 			}
 		}
 
-		if (file_exists($tpath)){
-			try {
-				$p = null;
-				if (array_key_exists($tpath, $this->tplCache)){
-					$p = $this->tplCache[$tpath];
-				} else {
-					$c = new TemplateCompiler($this->options);
-					$c->compile(file_get_contents($tpath));
+		try {
+			return $this->compileFile($tpath, $tcpath);
+		} catch (\Exception $e){
+			return 'Error: ' . $tplName . '.' . $this->options->getTemplateFileExtension() . ', ' . $e->getMessage();
+		}
+	}
 
-					$pgm = $c->getProgram();
-					if ($this->options->getCacheEnabled()){
-						file_put_contents($tcpath, json_encode($pgm));
-					}
+	/**
+	 * @param string $tplPath
+	 * @param string $cachePath
+	 * @return Template
+	 * @throws \RuntimeException
+	 */
+	protected function compileFile(string $tplPath, string $cachePath): Template {
+		if (!file_exists($tplPath)){
+			throw new \RuntimeException('Template "' . $tplPath . '" not found');
+		}
+		$p = null;
+		if (array_key_exists($tplPath, $this->tplCache)){
+			$p = $this->tplCache[$tplPath];
+		} else {
+			$c = new TemplateCompiler($this->options);
+			$c->compile(file_get_contents($tplPath));
 
-					$p = new Template($tpath, $pgm, $this->globalVars);
-					$this->tplCache[$tpath] = $p;
-				}
-
-				return $p;
-			} catch (\Exception $e){
-				return 'Error: ' . $tplName . '.' . $this->options->getTemplateFileExtension() . ', ' . $e->getMessage();
+			$pgm = $c->getProgram();
+			if ($this->options->getCacheEnabled()){
+				file_put_contents($cachePath, json_encode($pgm));
 			}
+
+			$p = new Template($tplPath, $pgm, $this->globalVars);
+			$this->tplCache[$tplPath] = $p;
 		}
 
-		return 'Error: template "' . $tplName . '" not found';
+		return $p;
 	}
 }

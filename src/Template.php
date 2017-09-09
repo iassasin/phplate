@@ -19,7 +19,7 @@ class Template {
 	private $widgets;
 	private $globalVars;
 
-	public static function init($tplPath, TemplateOptions $options = null): TemplateEngine{
+	public static function init($tplPath, TemplateOptions $options = null): TemplateEngine {
 		return TemplateEngine::init($tplPath, $options ?: new TemplateOptions());
 	}
 
@@ -29,7 +29,7 @@ class Template {
 	 * @param array $values - ассоциативный массив параметров вида ['arg' => 'val'] любой вложенности.
 	 * @return string
 	 */
-	public static function build($tplName, array $values): string{
+	public static function build(string $tplName, array $values): string {
 		return TemplateEngine::instance()->build($tplName, $values);
 	}
 
@@ -39,8 +39,18 @@ class Template {
 	 * @param array $values - ассоциативный массив параметров вида ['arg' => 'val'] любой вложенности.
 	 * @return string
 	 */
-	public static function buildStr($tplStr, array $values): string{
+	public static function buildStr(string $tplStr, array $values): string {
 		return TemplateEngine::instance()->buildStr($tplStr, $values);
+	}
+
+	/**
+	 * Вставляет в шаблон $tplPath переменные из массива $values
+	 * @param string $tplPath - путь к файлу шаблона
+	 * @param array $values - ассоциативный массив параметров вида ['arg' => 'val'] любой вложенности.
+	 * @return string
+	 */
+	public static function buildFile(string $tplPath, array $values): string {
+		return TemplateEngine::instance()->buildFile($tplPath, $values);
 	}
 
 	public static function addUserFunctionHandler(string $name, callable $f){
@@ -66,7 +76,7 @@ class Template {
 		return $this->path;
 	}
 
-	public function run($values){
+	public function run($values): self {
 		$this->values = $values;
 		$this->res = '';
 
@@ -76,7 +86,7 @@ class Template {
 		$this->blocks = [];
 		$this->widgets = [];
 
-		return true;
+		return $this;
 	}
 
 	public function execPgm($pgm){
