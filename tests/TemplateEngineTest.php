@@ -52,4 +52,9 @@ class TemplateEngineTest extends TestCase {
 		$result = self::$e->build('invalid_tpl', []);
 		$this->assertContains('Error:', $result);
 	}
+
+	public function testBuildFile(){
+		$result = self::$e->buildFile(__DIR__ . '/resources/template_test.html', ['message' => 'hello']);
+		$this->assertEquals('hello', $result);
+	}
 }
