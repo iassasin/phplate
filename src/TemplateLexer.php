@@ -132,6 +132,7 @@ class TemplateLexer {
 	}
 
 	public function setInput($str, $st = 0){ //STATE_TEXT
+		$str = preg_replace('/\n\r|\r\n|\r/', "\n", $str);
 		$this->input = $str;
 		$this->ilen = strlen($str);
 		$this->cpos = 0;
@@ -634,10 +635,6 @@ class TemplateLexer {
 					while ($cpos < $this->ilen){
 						if ($this->input{$cpos} == "\n"){
 							++$this->cline;
-							++$cpos;
-							if ($this->input{$cpos} == "\r"){
-								++$cpos;
-							}
 							break;
 						}
 						++$cpos;
