@@ -372,7 +372,7 @@ class TemplateLexer {
 		}
 
 		while ($cpos < $this->ilen){
-			$c = $this->input{$cpos};
+			$c = $this->input[$cpos];
 
 			if ($c != '{' && $c != '<'){
 				if ($c == "\n"){
@@ -387,7 +387,7 @@ class TemplateLexer {
 				break;
 			}
 
-			$c2 = $this->input{$cpos + 1};
+			$c2 = $this->input[$cpos + 1];
 
 			if ($c2 == '*'){
 				$this->token .= substr($this->input, $this->cpos, $cpos - $this->cpos);
@@ -417,7 +417,7 @@ class TemplateLexer {
 		$cpos = $this->cpos;
 
 		while ($cpos < $this->ilen){
-			$c = $this->input{$cpos};
+			$c = $this->input[$cpos];
 
 			if ($c != '*'){
 				if ($c == "\n"){
@@ -434,7 +434,7 @@ class TemplateLexer {
 				break;
 			}
 
-			$c = $this->input{$cpos};
+			$c = $this->input[$cpos];
 			if ($c == '}'){
 				++$cpos;
 				break;
@@ -455,7 +455,7 @@ class TemplateLexer {
 			return false;
 		}
 
-		$ch = $this->input{$cpos};
+		$ch = $this->input[$cpos];
 
 		if ($ch == '"' || $ch == "'"){
 			$esym = $ch;
@@ -464,14 +464,14 @@ class TemplateLexer {
 			$this->token = '';
 
 			while ($cpos < $this->ilen){
-				$ch = $this->input{$cpos};
+				$ch = $this->input[$cpos];
 				if ($ch != $esym){
 					if ($ch == "\n"){
 						++$this->cline;
 					}
 
 					if ($ch == '\\' && $cpos + 1 < $this->ilen){
-						$ch2 = $this->input{$cpos + 1};
+						$ch2 = $this->input[$cpos + 1];
 						$rch = '';
 						switch ($ch2){
 							case 'n':
@@ -510,7 +510,7 @@ class TemplateLexer {
 				}
 			}
 
-			if ($cpos >= $this->ilen || $this->input{$cpos} != $esym){
+			if ($cpos >= $this->ilen || $this->input[$cpos] != $esym){
 				$this->error('Expected ' . $esym);
 			}
 
@@ -565,7 +565,7 @@ class TemplateLexer {
 			}
 
 			if (strpos(self::TERMINAL_OPERATORS, $ch) === false){
-				while ($cpos < $this->ilen && strpos(self::OPERATORS, $this->input{$cpos}) !== false && strpos(self::TERMINAL_OPERATORS, $this->input{$cpos}) === false)
+				while ($cpos < $this->ilen && strpos(self::OPERATORS, $this->input[$cpos]) !== false && strpos(self::TERMINAL_OPERATORS, $this->input[$cpos]) === false)
 					++$cpos;
 			}
 
@@ -578,7 +578,7 @@ class TemplateLexer {
 
 			++$cpos;
 			while ($cpos < $this->ilen){
-				$ch = $this->input{$cpos};
+				$ch = $this->input[$cpos];
 				if ($ch >= '0' && $ch <= '9' || $ch == '.'){
 					++$cpos;
 				} else {
@@ -595,7 +595,7 @@ class TemplateLexer {
 
 			++$cpos;
 			while ($cpos < $this->ilen){
-				$ch = $this->input{$cpos};
+				$ch = $this->input[$cpos];
 				if ($ch >= 'a' && $ch <= 'z' || $ch >= 'A' && $ch <= 'Z' || $ch >= '0' && $ch <= '9' || $ch == '_'){
 					++$cpos;
 				} else {
@@ -623,30 +623,30 @@ class TemplateLexer {
 	private function skipSpacesAndComments(){
 		$cpos = $this->cpos;
 		while ($cpos < $this->ilen){
-			while ($cpos < $this->ilen && strpos("\r\n\t ", $this->input{$cpos}) !== false){
-				if ($this->input{$cpos} == "\n")
+			while ($cpos < $this->ilen && strpos("\r\n\t ", $this->input[$cpos]) !== false){
+				if ($this->input[$cpos] == "\n")
 					++$this->cline;
 				++$cpos;
 			}
 
-			if ($cpos + 1 < $this->ilen && $this->input{$cpos} == '/'){
-				if ($this->input{$cpos + 1} == '/'){
+			if ($cpos + 1 < $this->ilen && $this->input[$cpos] == '/'){
+				if ($this->input[$cpos + 1] == '/'){
 					$cpos += 2;
 					while ($cpos < $this->ilen){
-						if ($this->input{$cpos} == "\n"){
+						if ($this->input[$cpos] == "\n"){
 							++$this->cline;
 							break;
 						}
 						++$cpos;
 					}
 				}
-				else if ($this->input{$cpos + 1} == '*'){
+				else if ($this->input[$cpos + 1] == '*'){
 					$cpos += 2;
 					while ($cpos < $this->ilen){
-						if ($this->input{$cpos} == "\n"){
+						if ($this->input[$cpos] == "\n"){
 							++$this->cline;
 						}
-						else if ($this->input{$cpos} == '*' && $cpos + 1 < $this->ilen && $this->input{$cpos + 1} == '/'){
+						else if ($this->input[$cpos] == '*' && $cpos + 1 < $this->ilen && $this->input[$cpos + 1] == '/'){
 							$cpos += 2;
 							break;
 						}
@@ -681,7 +681,7 @@ class TemplateLexer {
 		$res = '';
 		$state = 0;
 		while ($pos < $this->ilen){
-			$ch = $this->input{$pos};
+			$ch = $this->input[$pos];
 			if (!array_key_exists($ch, $m[$state])){
 				return false;
 			}

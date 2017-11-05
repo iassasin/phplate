@@ -101,7 +101,7 @@ class TemplateEngine {
 	public function compile(string $tplName, string $includeFrom = null){
 		$tplNameExt = $tplName . '.' . $this->options->getTemplateFileExtension();
 		$path = $this->tplPath;
-		if (null !== $includeFrom && '' !== $includeFrom && '/' !== $tplName{0}){
+		if (null !== $includeFrom && '' !== $includeFrom && '/' !== $tplName[0]){
 			$path = dirname($includeFrom) . '/';
 		}
 		$tpath = realpath($path . $tplNameExt);
