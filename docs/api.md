@@ -58,6 +58,7 @@ public static function Template::build($tplName, $values)
 - **`string $tplName`** - путь к шаблону, без расширения и базового пути (который задается функцией init)
 - **`array $values`** - аргументы шаблона, могут быть чем угодно
 - **Возвращаемое значение**: **`string`**, шаблон с подставленными аргументами
+- **Исключения**: **`PhplateCompilerException`**, **`PhplateRuntimeException`**
 
 ---
 
@@ -70,6 +71,7 @@ public static function Template::buildStr($tplStr, $values)
 - **`string $tplStr`** - код шаблона, в который подставляются аргументы, аналогично содержимому файлов шаблонов
 - **`array $values`** - аргументы шаблона, могут быть чем угодно
 - **Возвращаемое значение**: **`string`**, шаблон с подставленными аргументами
+- **Исключения**: **`PhplateCompilerException`**, **`PhplateRuntimeException`**
 
 ---
 
@@ -82,3 +84,4 @@ public static function Template::buildFile($tplPath, $values)
 - **`string $tplPath`** - полный путь к шаблону из любой директории, включая расширение файла шаблона
 - **`array $values`** - аргументы шаблона, могут быть чем угодно
 - **Возвращаемое значение**: **`string`**, шаблон с подставленными аргументами
+- **Исключения**: **`PhplateCompilerException`**, **`PhplateRuntimeException`**
