@@ -9,8 +9,9 @@ namespace Iassasin\Phplate\Tests;
 
 use Iassasin\Phplate\Template;
 use Iassasin\Phplate\TemplateEngine;
-use PHPUnit\Framework\TestCase;
 use Iassasin\Phplate\TemplateOptions;
+use Iassasin\Phplate\Exception\PhplateRuntimeException;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @covers \Iassasin\Phplate\Template
@@ -20,6 +21,8 @@ use Iassasin\Phplate\TemplateOptions;
  * @covers \Iassasin\Phplate\TemplateLexer
  * @covers \Iassasin\Phplate\TemplateOptions
  * @covers \Iassasin\Phplate\DelayedProgram
+ * @covers \Iassasin\Phplate\Exception\PhplateException
+ * @covers \Iassasin\Phplate\Exception\PhplateRuntimeException
  */
 class TemplateTest extends TestCase {
 	public static function setUpBeforeClass(){
@@ -75,27 +78,27 @@ class TemplateTest extends TestCase {
 		$this->assertEquals($time2->format(TemplateEngine::instance()->getOptions()->getDateFormat()), $result[$i++]);
 		$this->assertEquals(19, $i); // сколько тестов должно быть выполнено
 
-		$this->expectException(\RuntimeException::class);
+		$this->expectException(PhplateRuntimeException::class);
 		Template::buildStr('{{ 1|unknown }}', []);
 	}
 
 	public function testInvalidPipeFunctionSubStr(){
-		$this->expectException(\InvalidArgumentException::class);
+		$this->expectException(PhplateRuntimeException::class);
 		Template::buildStr('{{ 1|substr }}', []);
 	}
 
 	public function testInvalidPipeFunctionSlice(){
-		$this->expectException(\InvalidArgumentException::class);
+		$this->expectException(PhplateRuntimeException::class);
 		Template::buildStr('{{ 1|slice }}', []);
 	}
 
 	public function testInvalidPipeFunctionReplace(){
-		$this->expectException(\InvalidArgumentException::class);
+		$this->expectException(PhplateRuntimeException::class);
 		Template::buildStr('{{ 1|replace }}', []);
 	}
 
 	public function testInvalidPipeFunctionDate(){
-		$this->expectException(\RuntimeException::class);
+		$this->expectException(PhplateRuntimeException::class);
 		Template::buildStr('{{ time|date }}', ['time' => true]);
 	}
 

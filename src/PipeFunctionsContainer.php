@@ -7,6 +7,8 @@
 
 namespace Iassasin\Phplate;
 
+use Iassasin\Phplate\Exception\PhplateRuntimeException;
+
 class PipeFunctionsContainer {
 
 	private $options;
@@ -33,7 +35,7 @@ class PipeFunctionsContainer {
 
 	public function eval(string $name, $value, $args){
 		if (!$this->has($name)){
-			throw new \RuntimeException('Unknown pipe function "' . $name . '".');
+			throw new PhplateRuntimeException('Unknown pipe function "' . $name . '".');
 		}
 		return call_user_func_array($this->functions[$name], array_merge([$value], $args));
 	}
@@ -101,7 +103,7 @@ class PipeFunctionsContainer {
 		} elseif ($count === 1) {
 			return substr($arg, $params[0]);
 		}
-		throw new \InvalidArgumentException('Invalid parameters count.');
+		throw new PhplateRuntimeException('Invalid parameters count for |substr.');
 	}
 
 	public function evalSlice($arg, ...$params){
@@ -111,12 +113,12 @@ class PipeFunctionsContainer {
 		} elseif ($count === 1) {
 			return array_slice($arg, $params[0]);
 		}
-		throw new \InvalidArgumentException('Invalid parameters count.');
+		throw new PhplateRuntimeException('Invalid parameters count for |slice.');
 	}
 
 	public function evalReplace($arg, ...$params): string {
 		if (count($params) < 2){
-			throw new \InvalidArgumentException('Invalid parameters count.');
+			throw new PhplateRuntimeException('Invalid parameters count for |replace.');
 		}
 		return str_replace($params[0], $params[1], $arg);
 	}
@@ -136,7 +138,7 @@ class PipeFunctionsContainer {
 		}
 
 		if (false === $arg){
-			throw new \RuntimeException('Некорректное значение даты-времени: ' . $oldVal);
+			throw new PhplateRuntimeException('Incorrect datetime value for |date: ' . $oldVal);
 		}
 		return date($format, $arg);
 	}

@@ -7,6 +7,8 @@
 
 namespace Iassasin\Phplate;
 
+use Iassasin\Phplate\Exception\PhplateCompilerException;
+
 class TemplateLexer {
 	const TOK_NONE = 0;
 	const TOK_ID = 1;
@@ -664,7 +666,7 @@ class TemplateLexer {
 	}
 
 	public function error($msg){
-		throw new \Exception('line ' . $this->cline . ': ' . $msg);
+		throw new PhplateCompilerException('line ' . $this->cline . ': ' . $msg);
 	}
 
 	/* State Machine:

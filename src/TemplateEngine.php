@@ -7,6 +7,10 @@
 
 namespace Iassasin\Phplate;
 
+use Iassasin\Phplate\Exception\PhplateException;
+use Iassasin\Phplate\Exception\PhplateRuntimeException;
+use Iassasin\Phplate\Exception\PhplateCompilerException;
+
 class TemplateEngine {
 
 	private static $instance;
@@ -91,8 +95,9 @@ class TemplateEngine {
 				->run($values)
 				->getResult()
 			;
-		} catch (\Exception $e){
-			$p = 'Error: ' . $tplPath . ', ' . $e->getMessage();
+		} catch (PhplateException $e){
+			$e->setTemplateLocation($tplPath);
+			throw $e;
 		}
 
 		return $p;
@@ -105,6 +110,10 @@ class TemplateEngine {
 			$path = dirname($includeFrom) . '/';
 		}
 		$tpath = realpath($path . $tplNameExt);
+
+		if ($tpath === false){
+			throw new PhplateCompilerException('Template "' . $tplName . '" not found');
+		}
 
 		$cachedir = $this->options->getCacheDir();
 		if ($cachedir === ''){
@@ -129,8 +138,9 @@ class TemplateEngine {
 
 		try {
 			return $this->compileFile($tpath, $tcpath);
-		} catch (\Exception $e){
-			return 'Error: ' . $tplName . '.' . $this->options->getTemplateFileExtension() . ', ' . $e->getMessage();
+		} catch (PhplateException $e){
+			$e->setTemplateLocation($tplNameExt);
+			throw $e;
 		}
 	}
 
@@ -138,11 +148,11 @@ class TemplateEngine {
 	 * @param string $tplPath
 	 * @param string $cachePath
 	 * @return Template
-	 * @throws \RuntimeException
+	 * @throws PhplateCompilerException
 	 */
 	protected function compileFile(string $tplPath, string $cachePath): Template {
 		if (!file_exists($tplPath)){
-			throw new \RuntimeException('Template "' . $tplPath . '" not found');
+			throw new PhplateCompilerException('Template "' . $tplPath . '" not found');
 		}
 		$p = null;
 		if (array_key_exists($tplPath, $this->tplCache)){

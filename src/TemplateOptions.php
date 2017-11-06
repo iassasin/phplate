@@ -7,6 +7,8 @@
 
 namespace Iassasin\Phplate;
 
+use Iassasin\Phplate\Exception\PhplateConfigException;
+
 class TemplateOptions {
 	const OPTION_DATE_FORMAT = 1;
 	const OPTION_CACHE_ENABLED = 2;
@@ -35,7 +37,7 @@ class TemplateOptions {
 	public function setDateFormat(string $format): self {
 		$date = date($format);
 		if (!$date){
-			throw new \LogicException("Invalid date format: \"{$format}\"");
+			throw new PhplateConfigException("Invalid date format: \"{$format}\"");
 		}
 		$this->options[self::OPTION_DATE_FORMAT] = $format;
 
@@ -90,11 +92,11 @@ class TemplateOptions {
 	/**
 	 * @param string $dir
 	 * @return TemplateOptions
-	 * @throws \InvalidArgumentException
+	 * @throws PhplateConfigException
 	 */
 	public function setCacheDir(string $dir): self {
 		if ($dir !== '' && (!file_exists($dir) || !is_dir($dir))) {
-			throw new \InvalidArgumentException('Invalid cache directory "' . $dir . '": directory does not exists.');
+			throw new PhplateConfigException('Invalid cache directory "' . $dir . '": directory does not exists.');
 		}
 		$this->options[self::OPTION_CACHE_DIR] = $dir;
 

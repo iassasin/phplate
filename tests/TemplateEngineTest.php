@@ -10,6 +10,7 @@ namespace Iassasin\Phplate\Tests;
 
 use Iassasin\Phplate\Template;
 use Iassasin\Phplate\TemplateEngine;
+use Iassasin\Phplate\Exception\PhplateCompilerException;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -19,6 +20,8 @@ use PHPUnit\Framework\TestCase;
  * @covers \Iassasin\Phplate\PipeFunctionsContainer
  * @covers \Iassasin\Phplate\TemplateCompiler
  * @covers \Iassasin\Phplate\TemplateLexer
+ * @covers \Iassasin\Phplate\Exception\PhplateException
+ * @covers \Iassasin\Phplate\Exception\PhplateCompilerException
  */
 class TemplateEngineTest extends TestCase {
 	/**
@@ -33,8 +36,8 @@ class TemplateEngineTest extends TestCase {
 	}
 
 	public function testUnknownTemplate(){
+		$this->expectException(PhplateCompilerException::class);
 		$result = self::$e->build('unknown-template', []);
-		$this->assertContains('Error', $result);
 	}
 
 	public function testOverridingPipeFunctions(){
@@ -49,8 +52,8 @@ class TemplateEngineTest extends TestCase {
 	}
 
 	public function testInvalidTpl(){
+		$this->expectException(PhplateCompilerException::class);
 		$result = self::$e->build('invalid_tpl', []);
-		$this->assertContains('Error:', $result);
 	}
 
 	public function testBuildFile(){

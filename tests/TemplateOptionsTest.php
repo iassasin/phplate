@@ -6,10 +6,13 @@
  */
 
 use Iassasin\Phplate\TemplateOptions;
+use Iassasin\Phplate\Exception\PhplateConfigException;
 use PHPUnit\Framework\TestCase;
 
 /**
  * @covers \Iassasin\Phplate\TemplateOptions
+ * @covers \Iassasin\Phplate\Exception\PhplateException
+ * @covers \Iassasin\Phplate\Exception\PhplateConfigException
  */
 class TemplatOptionsTest extends TestCase {
 	public function testTemplateOptions(){
@@ -25,7 +28,7 @@ class TemplatOptionsTest extends TestCase {
 	}
 
 	public function testInvalidOptionDate(){
-		$this->expectException(\LogicException::class);
+		$this->expectException(PhplateConfigException::class);
 		(new TemplateOptions())->setDateFormat('0');
 	}
 }
