@@ -7,6 +7,8 @@
 
 namespace Iassasin\Phplate;
 
+use Iassasin\Phplate\Exception\PhplateCompilerException;
+
 class TemplateLexer {
 	const TOK_NONE = 0;
 	const TOK_ID = 1;
@@ -23,9 +25,26 @@ class TemplateLexer {
 	const TERMINAL_OPERATORS = '.,@#;()[]$';
 	const ID_OPERATORS = ['and', 'or', 'xor', 'not'];
 
-	private static $PRE_OPS;
-	private static $INF_OPS;
+	private static $PRE_OPS = [
+		10 => ['+', '-', '!', 'not'],
+		11 => ['$'],
+	];
+	private static $INF_OPS = [
+		1 => ['=', '+=', '-=', '*=', '/='],
+		2 => ['??'],
+		3 => ['or'],
+		4 => ['xor'],
+		5 => ['and'],
+		6 => ['==', '===', '!=', '!==', '>=', '<=', '<', '>'],
+		7 => ['+', '-'],
+		8 => ['*', '/'],
+		9 => ['^'],
+
+		11 => ['.'],
+	];
 	private static $POST_OPS;
+
+	private static $init = false;
 
 	public $toktype;
 	public $token;
@@ -33,39 +52,24 @@ class TemplateLexer {
 	private $ilen;
 	private $cpos;
 	private $cline;
+
 	private $state;
 
 	public function __construct(){
+		if (!self::$init) {
+			self::_init();
+		}
 		$this->toktype = self::TOK_NONE;
 		$this->token = '';
 	}
 
 	public static function _init(){
-		self::$PRE_OPS = [
-			10 => ['+', '-', '!', 'not'],
-			11 => ['$'],
-		];
-
-		self::$INF_OPS = [
-			1 => ['=', '+=', '-=', '*=', '/='],
-			2 => ['??'],
-			3 => ['or'],
-			4 => ['xor'],
-			5 => ['and'],
-			6 => ['==', '===', '!=', '!==', '>=', '<=', '<', '>'],
-			7 => ['+', '-'],
-			8 => ['*', '/'],
-			9 => ['^'],
-
-			11 => ['.'],
-		];
-
+		self::$init = true;
 		self::$POST_OPS = [
 			10 => [
 				'|' => function (TemplateLexer $parser, $val, $lvl){
 					if (!$parser->nextToken() || $parser->toktype != self::TOK_ID){
-						$parser->error('Function name excepted in "|"');
-						return null;
+						$parser->error('Function name expected in "|"');
 					}
 
 					$fname = $parser->token;
@@ -79,8 +83,7 @@ class TemplateLexer {
 							} while ($parser->toktype == self::TOK_OP && $parser->token == ',');
 
 							if ($parser->toktype != self::TOK_OP || $parser->token != ')'){
-								$parser->error('Excepted ")" in pipe-function call');
-								return null;
+								$parser->error('Expected ")" in pipe-function call');
 							}
 
 							$parser->nextToken();
@@ -92,15 +95,13 @@ class TemplateLexer {
 
 				'[' => function (TemplateLexer $parser, $val, $lvl){
 					if (!$parser->nextToken()){
-						$parser->error('Argument excepted in "["');
-						return null;
+						$parser->error('Argument expected in "["');
 					}
 
 					$arg = $parser->infix(1);
 
 					if ($parser->toktype != self::TOK_OP || $parser->token != ']'){
-						$parser->error('Excepted "]"');
-						return null;
+						$parser->error('Expected "]"');
 					}
 
 					$parser->nextToken();
@@ -121,8 +122,7 @@ class TemplateLexer {
 					}
 
 					if (!$parser->isToken(self::TOK_OP, ')')){
-						$parser->error('Excepted ")" in function call');
-						return null;
+						$parser->error('Expected ")" in function call');
 					}
 
 					$parser->nextToken();
@@ -134,6 +134,7 @@ class TemplateLexer {
 	}
 
 	public function setInput($str, $st = 0){ //STATE_TEXT
+		$str = preg_replace('/\n\r|\r\n|\r/', "\n", $str);
 		$this->input = $str;
 		$this->ilen = strlen($str);
 		$this->cpos = 0;
@@ -145,10 +146,12 @@ class TemplateLexer {
 		return $this->toktype == $type && $this->token == $val;
 	}
 
+	/** @codeCoverageIgnore */
 	public function getToken(){
 		return [$this->toktype, $this->token];
 	}
 
+	/** @codeCoverageIgnore */
 	public function getTokenStr(){
 		return '[' . $this->toktype . ', "' . $this->token . '"]';
 	}
@@ -168,8 +171,7 @@ class TemplateLexer {
 			}
 
 			if (!$this->nextToken()){
-				$this->error('Unexcepted end of file. Operator excepted.');
-				return null;
+				$this->error('Unexpected end of file. Operator expected.');
 			}
 
 			if (is_callable($oplvl[1])){
@@ -191,8 +193,7 @@ class TemplateLexer {
 				$op = $this->token;
 				if ($op == '#'){ //block
 					if (!$this->nextToken() || $this->toktype != self::TOK_ID){
-						$this->error('Block name excepted');
-						return null;
+						$this->error('Block name expected');
 					}
 
 					$bname = $this->token;
@@ -206,8 +207,7 @@ class TemplateLexer {
 							} while ($this->toktype == self::TOK_OP && $this->token == ',');
 
 							if ($this->toktype != self::TOK_OP || $this->token != ')'){
-								$this->error('Excepted ")"');
-								return null;
+								$this->error('Expected ")"');
 							}
 
 							$this->nextToken();
@@ -219,15 +219,13 @@ class TemplateLexer {
 					return $this->postfix($lvl, $val);
 				} else if ($op == '('){
 					if (!$this->nextToken()){
-						$this->error('Argument excepted in "("');
-						return null;
+						$this->error('Argument expected in "("');
 					}
 
 					$val = $this->infix(1);
 
 					if ($this->toktype != self::TOK_OP || $this->token != ')'){
-						$this->error('Excepted ")"');
-						return null;
+						$this->error('Expected ")"');
 					}
 
 					$this->nextToken();
@@ -250,13 +248,13 @@ class TemplateLexer {
 				} else {
 					$oplvl = $this->findOperator(self::$PRE_OPS, $lvl, $op);
 					if ($oplvl == null){
-						$this->error('Unexcepted operator "' . $this->token . '"');
-						break;
+						$this->error('Unexpected operator "' . $this->token . '"');
+						// break;
 					}
 
 					if (!$this->nextToken()){
-						$this->error('Unexcepted end of file. Excepted identificator or expression');
-						break;
+						$this->error('Unexpected end of file. Expected identificator or expression');
+						// break;
 					}
 
 					$val = $this->infix($oplvl[0]);
@@ -302,12 +300,12 @@ class TemplateLexer {
 				return $this->postfix($lvl, $res);
 
 			case self::TOK_NONE:
-				$this->error('Unexcepted end of file');
-				break;
+				$this->error('Unexpected end of file');
+				// break;
 
 			default:
 				$this->error('Unknown token (type: ' . $this->toktype . '): "' . $this->token . '"');
-				break;
+				// break;
 		}
 
 		return null;
@@ -315,8 +313,7 @@ class TemplateLexer {
 
 	public function parseInlineArray($lvl){
 		if (!$this->nextToken()){
-			$this->error('Expression or "]" excepted after "["');
-			return null;
+			$this->error('Expression or "]" expected after "["');
 		}
 
 		$vals = [];
@@ -327,7 +324,7 @@ class TemplateLexer {
 			$val = $this->infix(1);
 			if ($this->isToken(self::TOK_OP, '=>')){
 				if ($val[0] != 'r'){
-					$this->error('Excepted constant for key in array');
+					$this->error('Expected constant for key in array');
 				}
 
 				$key = $val[1];
@@ -344,8 +341,7 @@ class TemplateLexer {
 		}
 
 		if (!$this->isToken(self::TOK_OP, ']')){
-			$this->error('Excepted "]" for inline array');
-			return null;
+			$this->error('Expected "]" for inline array');
 		}
 
 		$this->nextToken();
@@ -378,7 +374,7 @@ class TemplateLexer {
 		}
 
 		while ($cpos < $this->ilen){
-			$c = $this->input{$cpos};
+			$c = $this->input[$cpos];
 
 			if ($c != '{' && $c != '<'){
 				if ($c == "\n"){
@@ -393,7 +389,7 @@ class TemplateLexer {
 				break;
 			}
 
-			$c2 = $this->input{$cpos + 1};
+			$c2 = $this->input[$cpos + 1];
 
 			if ($c2 == '*'){
 				$this->token .= substr($this->input, $this->cpos, $cpos - $this->cpos);
@@ -423,7 +419,7 @@ class TemplateLexer {
 		$cpos = $this->cpos;
 
 		while ($cpos < $this->ilen){
-			$c = $this->input{$cpos};
+			$c = $this->input[$cpos];
 
 			if ($c != '*'){
 				if ($c == "\n"){
@@ -440,7 +436,7 @@ class TemplateLexer {
 				break;
 			}
 
-			$c = $this->input{$cpos};
+			$c = $this->input[$cpos];
 			if ($c == '}'){
 				++$cpos;
 				break;
@@ -451,14 +447,8 @@ class TemplateLexer {
 	}
 
 	public function nextToken_code(){
+		$this->skipSpacesAndComments();
 		$cpos = $this->cpos;
-
-		while ($cpos < $this->ilen && strpos("\r\n\t ", $this->input{$cpos}) !== false){
-			if ($this->input{$cpos} == "\n")
-				++$this->cline;
-			++$cpos;
-		}
-		$this->cpos = $cpos;
 
 		if ($cpos >= $this->ilen){
 			$this->token = '';
@@ -467,7 +457,7 @@ class TemplateLexer {
 			return false;
 		}
 
-		$ch = $this->input{$cpos};
+		$ch = $this->input[$cpos];
 
 		if ($ch == '"' || $ch == "'"){
 			$esym = $ch;
@@ -476,14 +466,14 @@ class TemplateLexer {
 			$this->token = '';
 
 			while ($cpos < $this->ilen){
-				$ch = $this->input{$cpos};
+				$ch = $this->input[$cpos];
 				if ($ch != $esym){
 					if ($ch == "\n"){
 						++$this->cline;
 					}
 
 					if ($ch == '\\' && $cpos + 1 < $this->ilen){
-						$ch2 = $this->input{$cpos + 1};
+						$ch2 = $this->input[$cpos + 1];
 						$rch = '';
 						switch ($ch2){
 							case 'n':
@@ -522,8 +512,8 @@ class TemplateLexer {
 				}
 			}
 
-			if ($cpos >= $this->ilen || $this->input{$cpos} != $esym){
-				$this->error('Excepted ' . $esym);
+			if ($cpos >= $this->ilen || $this->input[$cpos] != $esym){
+				$this->error('Expected ' . $esym);
 			}
 
 			$this->toktype = self::TOK_STR;
@@ -577,7 +567,7 @@ class TemplateLexer {
 			}
 
 			if (strpos(self::TERMINAL_OPERATORS, $ch) === false){
-				while ($cpos < $this->ilen && strpos(self::OPERATORS, $this->input{$cpos}) !== false && strpos(self::TERMINAL_OPERATORS, $this->input{$cpos}) === false)
+				while ($cpos < $this->ilen && strpos(self::OPERATORS, $this->input[$cpos]) !== false && strpos(self::TERMINAL_OPERATORS, $this->input[$cpos]) === false)
 					++$cpos;
 			}
 
@@ -590,7 +580,7 @@ class TemplateLexer {
 
 			++$cpos;
 			while ($cpos < $this->ilen){
-				$ch = $this->input{$cpos};
+				$ch = $this->input[$cpos];
 				if ($ch >= '0' && $ch <= '9' || $ch == '.'){
 					++$cpos;
 				} else {
@@ -607,7 +597,7 @@ class TemplateLexer {
 
 			++$cpos;
 			while ($cpos < $this->ilen){
-				$ch = $this->input{$cpos};
+				$ch = $this->input[$cpos];
 				if ($ch >= 'a' && $ch <= 'z' || $ch >= 'A' && $ch <= 'Z' || $ch >= '0' && $ch <= '9' || $ch == '_'){
 					++$cpos;
 				} else {
@@ -632,8 +622,51 @@ class TemplateLexer {
 		}
 	}
 
+	private function skipSpacesAndComments(){
+		$cpos = $this->cpos;
+		while ($cpos < $this->ilen){
+			while ($cpos < $this->ilen && strpos("\r\n\t ", $this->input[$cpos]) !== false){
+				if ($this->input[$cpos] == "\n")
+					++$this->cline;
+				++$cpos;
+			}
+
+			if ($cpos + 1 < $this->ilen && $this->input[$cpos] == '/'){
+				if ($this->input[$cpos + 1] == '/'){
+					$cpos += 2;
+					while ($cpos < $this->ilen){
+						if ($this->input[$cpos] == "\n"){
+							++$this->cline;
+							break;
+						}
+						++$cpos;
+					}
+				}
+				else if ($this->input[$cpos + 1] == '*'){
+					$cpos += 2;
+					while ($cpos < $this->ilen){
+						if ($this->input[$cpos] == "\n"){
+							++$this->cline;
+						}
+						else if ($this->input[$cpos] == '*' && $cpos + 1 < $this->ilen && $this->input[$cpos + 1] == '/'){
+							$cpos += 2;
+							break;
+						}
+						++$cpos;
+					}
+				}
+				else {
+					break;
+				}
+			} else {
+				break;
+			}
+		}
+		$this->cpos = $cpos;
+	}
+
 	public function error($msg){
-		throw new \Exception('line ' . $this->cline . ': ' . $msg);
+		throw new PhplateCompilerException('line ' . $this->cline . ': ' . $msg);
 	}
 
 	/* State Machine:
@@ -650,7 +683,7 @@ class TemplateLexer {
 		$res = '';
 		$state = 0;
 		while ($pos < $this->ilen){
-			$ch = $this->input{$pos};
+			$ch = $this->input[$pos];
 			if (!array_key_exists($ch, $m[$state])){
 				return false;
 			}
@@ -707,5 +740,3 @@ class TemplateLexer {
 		return null;
 	}
 }
-
-TemplateLexer::_init();

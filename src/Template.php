@@ -8,119 +8,75 @@
 namespace Iassasin\Phplate;
 
 class Template {
-	public static $TPL_PATH = './';
+	const AUTOSAFE_IGNORE = ['safe', 'text', 'raw', 'url'];
 
-	private static $TPL_CACHE = [];
-	private static $USER_FUNCS = [];
-	private static $GLOB_VARS = [];
-	/**
-	 * @var TemplateOptions|null
-	 */
-	private static $OPTIONS;
-
+	private $path;
 	public $pgm;
 	public $values;
-	public $options;
 	public $res;
 	private $includes;
 	private $blocks;
 	private $widgets;
+	private $globalVars;
 
-	private function __construct($pgm){
+	public static function init($tplPath, TemplateOptions $options = null): TemplateEngine {
+		return TemplateEngine::init($tplPath, $options ?: new TemplateOptions());
+	}
+
+	/**
+	 * Вставляет в шаблон $tplName переменные из массива $values
+	 * @param string $tplName - имя шаблона
+	 * @param array $values - ассоциативный массив параметров вида ['arg' => 'val'] любой вложенности.
+	 * @return string
+	 */
+	public static function build(string $tplName, array $values): string {
+		return TemplateEngine::instance()->build($tplName, $values);
+	}
+
+	/**
+	 * Вставляет в шаблон $tplStr переменные из массива $values
+	 * @param string $tplStr - код шаблона
+	 * @param array $values - ассоциативный массив параметров вида ['arg' => 'val'] любой вложенности.
+	 * @return string
+	 */
+	public static function buildStr(string $tplStr, array $values): string {
+		return TemplateEngine::instance()->buildStr($tplStr, $values);
+	}
+
+	/**
+	 * Вставляет в шаблон $tplPath переменные из массива $values
+	 * @param string $tplPath - путь к файлу шаблона
+	 * @param array $values - ассоциативный массив параметров вида ['arg' => 'val'] любой вложенности.
+	 * @return string
+	 */
+	public static function buildFile(string $tplPath, array $values): string {
+		return TemplateEngine::instance()->buildFile($tplPath, $values);
+	}
+
+	public static function addUserFunctionHandler(string $name, callable $f){
+		TemplateEngine::instance()->addUserFunctionHandler($name, $f);
+	}
+
+	public static function addGlobalVar($name, $val){
+		TemplateEngine::instance()->addGlobalVar($name, $val);
+	}
+
+	public function __construct(string $path, $pgm, $globalVars){
+		$this->path = $path;
 		$this->pgm = $pgm;
 		$this->values = [];
 		$this->res = '';
 		$this->includes = [];
 		$this->blocks = [];
 		$this->widgets = [];
+		$this->globalVars = $globalVars;
 	}
 
-	public static function init($tplpath, TemplateOptions $options = null){
-		self::$TPL_PATH = $tplpath;
-		self::$OPTIONS = $options ?: new TemplateOptions();
+	public function getPath(): string {
+		return $this->path;
 	}
 
-	public static function addUserFunctionHandler($name, $f){
-		if (isset(self::$USER_FUNCS[$name])) {
-			throw new \RuntimeException("Функция с именем \"{$name}\" уже была добавлена.");
-		}
-		if (is_callable($f)){
-			self::$USER_FUNCS[$name] = $f;
-		}
-	}
-
-	public static function addGlobalVar($name, $val){
-		self::$GLOB_VARS[$name] = $val;
-	}
-
-	/**
-	 * Вставляет в шаблон $tplname переменные из массива $values
-	 * $tplname - имя шаблона
-	 * $values - ассоциативный массив параметров вида ['arg' => 'val'] любой вложенности.
-	 */
-	public static function build($tplname, array $values){
-		$p = self::compile($tplname);
-		if (is_string($p)){
-			return $p;
-		}
-		$p->run($values);
-
-		return $p->getResult();
-	}
-
-	public static function build_str($tplstr, array $values){
-		$c = new TemplateCompiler();
-		$c->compile($tplstr);
-		$p = new Template($c->getProgram());
-		$p->run($values);
-
-		return $p->getResult();
-	}
-
-	private static function compile($tplname){
-		$tpath = self::$TPL_PATH . $tplname . '.html';
-		$tcpath = self::$TPL_PATH . $tplname . '.ctpl';
-
-		if (self::$OPTIONS->getCacheEnabled() && file_exists($tcpath)){
-			if (!file_exists($tpath) || filemtime($tcpath) >= filemtime($tpath)){
-				$pgm = json_decode(file_get_contents($tcpath), true);
-				if ($pgm !== false){
-					$p = new Template($pgm);
-					self::$TPL_CACHE[$tpath] = $p;
-
-					return $p;
-				}
-			}
-		}
-
-		if (file_exists($tpath)){
-			try {
-				$p = null;
-				if (array_key_exists($tpath, self::$TPL_CACHE)){
-					$p = self::$TPL_CACHE[$tpath];
-				} else {
-					$c = new TemplateCompiler();
-					$c->compile(file_get_contents($tpath));
-
-					$pgm = $c->getProgram();
-					if (self::$OPTIONS->getCacheEnabled()){
-						file_put_contents($tcpath, json_encode($pgm));
-					}
-
-					$p = new Template($pgm);
-					self::$TPL_CACHE[$tpath] = $p;
-				}
-
-				return $p;
-			} catch (\Exception $e){
-				return 'Error: ' . $tplname . '.html, ' . $e->getMessage();
-			}
-		}
-
-		return 'Error: template "' . $tplname . '" not found';
-	}
-
-	public function run($values){
+	public function run($values): self {
 		$this->values = $values;
 		$this->res = '';
 
@@ -130,7 +86,7 @@ class Template {
 		$this->blocks = [];
 		$this->widgets = [];
 
-		return true;
+		return $this;
 	}
 
 	public function execPgm($pgm){
@@ -179,7 +135,7 @@ class Template {
 						$arg = [$arg];
 					}
 
-					$p = self::compile($ins[1]);
+					$p = TemplateEngine::instance()->compile($ins[1], $this->path);
 					if (is_string($p)){
 						$this->res .= $p;
 					} else {
@@ -202,14 +158,21 @@ class Template {
 							$this->values[$k] = $val;
 							$this->execPgm($ins[3]);
 						}
+					} else {
+						$this->execPgm($ins[4]);
 					}
 					break;
 
 				case 'for':
 					$this->values[$ins[1]] = $this->readValue($ins[2]);
-					while ($this->readValue($ins[3])){
-						$this->execPgm($ins[5]);
-						$this->readValue($ins[4]);
+					if ($this->readValue($ins[3])){
+						do {
+							$this->execPgm($ins[5]);
+							$this->readValue($ins[4]);
+						}
+						while ($this->readValue($ins[3]));
+					} else {
+						$this->execPgm($ins[6]);
 					}
 					break;
 
@@ -249,6 +212,11 @@ class Template {
 		}
 	}
 
+	public function getResult(){
+		return $this->res;
+	}
+
+
 	/**
 	 * Program arrays:
 	 * ['str', $string]
@@ -257,8 +225,8 @@ class Template {
 	 * ['if', $var, $body_true, $body_false]
 	 * ['incl', $tpl, $isarr, [$arg1, $arg2, ...]]
 	 * ['inclo', $tpl, $isarr, [$arg1, $arg2, ...]]
-	 * ['fore', $i, $var, $body]
-	 * ['for', $i, $init, $cond, $post, $body]
+	 * ['fore', $i, $var, $body, $elsebody]
+	 * ['for', $i, $init, $cond, $post, $body, $elsebody]
 	 * ['regb', $name, $body]
 	 * ['regw', $name, $wbody]
 	 * ['widg', $name, $attrs, $body]
@@ -286,9 +254,9 @@ class Template {
 				return array_key_exists($op[1], $this->values) ? $this->values[$op[1]] : false;
 
 			case 'g':
-				if ($op[1] === null) return self::$GLOB_VARS;
+				if ($op[1] === null) return $this->globalVars;
 
-				return array_key_exists($op[1], self::$GLOB_VARS) ? self::$GLOB_VARS[$op[1]] : false;
+				return array_key_exists($op[1], $this->globalVars) ? $this->globalVars[$op[1]] : false;
 
 			case '[p':
 				$v = $this->readValue($op[1]);
@@ -447,7 +415,7 @@ class Template {
 			case '-=i':
 			case '*=i':
 			case '/=i':
-				try {
+				try{
 					$v1 =& $this->readValueReference($op[1]);
 				} catch (\Exception $e){
 					return false;
@@ -486,117 +454,7 @@ class Template {
 		for ($i = 0; $i < $facnt; ++$i){
 			$fargs[$i] = $this->readValue($fargs[$i]);
 		}
-
-		switch ($func){
-			case 'safe':
-				$v = htmlspecialchars($v);
-				break;
-			case 'text':
-				$v = str_replace(
-					["\n", '  ', "\t"],
-					["\n<br>", '&nbsp;&nbsp;', '&nbsp;&nbsp;&nbsp;&nbsp;'],
-					htmlspecialchars($v)
-				);
-				break;
-
-			case 'lowercase':
-				$v = mb_strtolower($v, 'utf-8');
-				break;
-			case 'uppercase':
-				$v = mb_strtoupper($v, 'utf-8');
-				break;
-
-			case 'url':
-				$v = htmlspecialchars($v);
-				break;
-			case 'urlparam':
-				$v = rawurlencode($v);
-				break;
-
-			case 'json':
-				$v = json_encode($v);
-				break;
-
-			case 'count':
-				$v = count($v);
-				break;
-
-			case 'isarray':
-				$v = is_array($v);
-				break;
-			case 'keys':
-				$v = array_keys($v);
-				break;
-
-			case 'join':
-				if ($facnt >= 1){
-					$v = join($fargs[0], $v);
-				}
-				break;
-
-			case 'split':
-				if ($facnt >= 1){
-					$v = explode($fargs[0], $v);
-				}
-				break;
-
-			case 'substr':
-				if ($facnt >= 1){
-					if ($facnt >= 2){
-						$v = substr($v, $fargs[0], $fargs[1]);
-					} else {
-						$v = substr($v, $fargs[0]);
-					}
-				}
-				break;
-
-			case 'slice':
-				if ($facnt >= 1){
-					if ($facnt >= 2){
-						$v = array_slice($v, $fargs[0], $fargs[1]);
-					} else {
-						$v = array_slice($v, $fargs[0]);
-					}
-				}
-				break;
-
-			case 'replace':
-				if ($facnt >= 2){
-					$v = str_replace($fargs[0], $fargs[1], $v);
-				}
-				break;
-
-			case 'date':
-				if ($facnt >= 1){
-					$format = $fargs[0];
-				} else {
-					$format = self::$OPTIONS->getDateFormat();
-				}
-				$oldVal = $v;
-				if ($v instanceof \DateTimeInterface){
-					$v = $v->format($format);
-					// выходим, чтобы сразу вернуть результат - $v
-					break;
-				}
-				if (!is_numeric($v)){
-					$v = strtotime($v);
-				}
-				$v = date($format, $v);
-
-				if (false === $v){
-					throw new \RuntimeException('Некорректное значение даты-времени: ' . $oldVal);
-				}
-				break;
-
-			default:
-				if (isset(self::$USER_FUNCS[$func])) {
-					$f = self::$USER_FUNCS[$func];
-					$v = $f($v, $fargs);
-				}
-				break;
-		}
-
-		return $v;
+		return TemplateEngine::instance()->getUserFunctions()->eval($func, $v, $fargs);
 	}
 
 	private function &readValueReference($op){
@@ -610,12 +468,14 @@ class Template {
 				return $this->values[$op[1]];
 
 			case 'g':
-				if ($op[1] === null)
-					return self::$GLOB_VARS;
-				if (!array_key_exists($op[1], self::$GLOB_VARS))
-					self::$GLOB_VARS[$op[1]] = false;
+				if ($op[1] === null){
+					return $this->globalVars;
+				}
+				if (!array_key_exists($op[1], $this->globalVars)){
+					$this->globalVars[$op[1]] = false;
+				}
 
-				return self::$GLOB_VARS[$op[1]];
+				return $this->globalVars[$op[1]];
 
 			case '[p':
 				$v =& $this->readValueReference($op[1]);
@@ -660,9 +520,5 @@ class Template {
 		}
 
 		throw new \Exception();
-	}
-
-	public function getResult(){
-		return $this->res;
 	}
 }

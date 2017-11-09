@@ -3,8 +3,9 @@ Hello
 World!'|text }}|{{
 'HELLO WORLD'|lowercase }}|{{
 'hello world'|uppercase }}|{{
+'<>'|url }}|{{
 '&'|urlparam }}|{{
-arr|json }}|{{
+arr|json|raw }}|{{
 arr|count }}|{?if arr|isarray ?}is array{? end ?}|{{
 arr|keys|join(',') }}|{?
 myArr = '1,2'|split(',') ?}{{ myArr[0] }}:{{ myArr[1] }}|{{
@@ -13,4 +14,7 @@ myArr = '1,2'|split(',') ?}{{ myArr[0] }}:{{ myArr[1] }}|{{
 slices|slice(2)|join(',') }}|{{
 slices|slice(2,1)|join(',') }}|{{
 'Hello world!'|replace('world','hello') }}|{{
-num|my_pow(2) }}
+num|my_pow(2) }}|{{
+time|date('Y-m-d H:i:s') }}|{{
+time2|date
+}}

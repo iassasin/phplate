@@ -1,4 +1,5 @@
 # Phplate
+[![PHP Version](https://img.shields.io/badge/php-%3E%3D%207.0-8892BF.svg)](https://php.net/)
 [![Build Status](https://travis-ci.org/iassasin/phplate.svg?branch=master)](https://travis-ci.org/iassasin/phplate)
 [![Coverage Status](https://coveralls.io/repos/github/iassasin/phplate/badge.svg?branch=master)](https://coveralls.io/github/iassasin/phplate?branch=master)
 

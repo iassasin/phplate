@@ -8,30 +8,18 @@
 public static function Template::init($tplpath, TemplateOptions $options = null)
 ```
 
- Инициализирует phplate, задает каталог, хранящий шаблоны (файлы .html)  
+ Инициализирует phplate, задает каталог, хранящий шаблоны (файлы .html)
+ Если настройки не заданы то шаблонизатор будет инициализирован с настройками по умолчанию
 
 - **`string $tplpath`** - путь к каталогу, содержащему шаблоны сайта
-- **`TemplateOptions $options`** - определяет настройки phplate
-- **Возвращаемое значение**:  нет
+- **`TemplateOptions $options`** - определяет [настройки Phplate](options.md)
+- **Возвращаемое значение**: объект класса `TemplateEngine`.  
+Использование объекта `TemplateEngine` может быть полезно в тех случаях,
+ когда требуется работа *Phplate* в нескольких режимах, то есть с разными настройками.  
+В классе `TemplateEngine` доступны все те же методы API, что и в `Template`, но как нестатичные методы класса.  
+Важно отметить, что *API* всегда работает именно с теми настройками, которые были переданы в `Template::init` перед использованием *API*.
 
-`TemplateOptions` содержит следующие методы:
-- `getDateFormat()` и `setDateFormat(string $format)`
-  - Управление форматом по-умолчанию для пайп-функции `date`
-  - Значение по-умолчанию: `Y-m-d H:i:s`
-- `getCacheEnabled()` и `setCacheEnabled(boolean $value)`
-  - Управление кэшированием результата компиляции шаблона (в файлы .ctpl)
-  - Значение по-умолчанию: `true`
-- `getAutoSafeEnabled()` и `setAutoSafeEnabled(boolean $value)`
-  - Управление автоматическим применением пайп-функции `safe` для всего вывода в [блоке аргументов](syntax.md)
-  - Значение по-умолчанию: `true`
-
-Пример настройки:
-```php
-Template::init($_SERVER['DOCUMENT_ROOT'].'/templates/', (new TemplateOptions)
-    ->setCacheEnabled(true)
-    ->setAutoSafeEnabled(true)
-);
-```
+Доступные опции и пример настройки смотрите в статье [настройки Phplate](options.md)
 
 ---
 
@@ -62,23 +50,38 @@ public static function Template::addGlobalVar($name, $val)
 ---
 
 ```php
-public static function Template::build($tplname, $values)
+public static function Template::build($tplName, $values)
 ```
 
 Выполняет подстановку в аргументов в шаблон из указанного файла
 
-- **`string $tplname`** - путь к шаблону, без расширения и базового пути (который задается функцией init)
+- **`string $tplName`** - путь к шаблону, без расширения и базового пути (который задается функцией init)
 - **`array $values`** - аргументы шаблона, могут быть чем угодно
 - **Возвращаемое значение**: **`string`**, шаблон с подставленными аргументами
+- **Исключения**: **`PhplateCompilerException`**, **`PhplateRuntimeException`**
 
 ---
 
 ```php
-public static function Template::build_str($tplstr, $values)
+public static function Template::buildStr($tplStr, $values)
 ```
 
 Выполняет подстановку в аргументов в шаблон, переданный функции напрямую
 
-- **`string $tplstr`** - код шаблона, в который подставляются аргументы, аналогично содержимому файлов шаблонов
+- **`string $tplStr`** - код шаблона, в который подставляются аргументы, аналогично содержимому файлов шаблонов
 - **`array $values`** - аргументы шаблона, могут быть чем угодно
 - **Возвращаемое значение**: **`string`**, шаблон с подставленными аргументами
+- **Исключения**: **`PhplateCompilerException`**, **`PhplateRuntimeException`**
+
+---
+
+```php
+public static function Template::buildFile($tplPath, $values)
+```
+
+Выполняет подстановку в аргументов в шаблон из произвольного указанного файла
+
+- **`string $tplPath`** - полный путь к шаблону из любой директории, включая расширение файла шаблона
+- **`array $values`** - аргументы шаблона, могут быть чем угодно
+- **Возвращаемое значение**: **`string`**, шаблон с подставленными аргументами
+- **Исключения**: **`PhplateCompilerException`**, **`PhplateRuntimeException`**
