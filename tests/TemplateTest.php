@@ -150,6 +150,12 @@ class TemplateTest extends TestCase {
 		$this->assertEquals($msg, $res);
 	}
 
+	public function testIncludeSubdirectory(){
+		$msg = 'msg';
+		$res = Template::build('sub/parent_include', []);
+		$this->assertEquals($msg, $res);
+	}
+
 	public function testAssignment(){
 		$this->assertEquals('5', Template::buildStr('{? v = 5; v ?}', []));
 		$this->assertEquals('5', Template::buildStr('{? v.f = 5; v.f ?}', ['v' => []]));
