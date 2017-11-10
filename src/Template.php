@@ -140,11 +140,15 @@ class Template {
 						$this->res .= $p;
 					} else {
 						$oldvals = $this->values;
+						$oldPath = $this->path;
 						$this->values = $arg;
+						$this->path = $p->path;
+
 						$this->includes[] = $ins[1];
 
 						$this->execPgm($p->pgm);
 
+						$this->path = $oldPath;
 						$this->values = $oldvals;
 					}
 					break;
