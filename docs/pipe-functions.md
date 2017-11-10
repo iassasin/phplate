@@ -66,7 +66,7 @@
 
 ```php
 
-Template::addUserFunctionHandler('json_pretty', function ($variable, $args = []) {
+Template::addUserFunctionHandler('json_pretty', function ($variable, ...$args) {
     return nl2br(str_replace(' ', '&nbsp;', json_encode($variable, JSON_PRETTY_PRINT)));
 });
 echo Template::build('template', ['arr' => ['Object' => ['Field1' => 1, 'Field2' => null]]]);
