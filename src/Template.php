@@ -114,6 +114,7 @@ class Template {
 
 				case 'incl':
 				case 'inclo':
+				case 'extd':
 					if ($ins[0] == 'inclo'){
 						if (in_array($ins[1], $this->includes)){
 							break;
@@ -136,21 +137,26 @@ class Template {
 					}
 
 					$p = TemplateEngine::instance()->compile($ins[1], $this->path);
-					if (is_string($p)){
-						$this->res .= $p;
-					} else {
-						$oldvals = $this->values;
-						$oldPath = $this->path;
-						$this->values = $arg;
-						$this->path = $p->path;
 
-						$this->includes[] = $ins[1];
+					$this->includes[] = $ins[1];
 
-						$this->execPgm($p->pgm);
-
-						$this->path = $oldPath;
-						$this->values = $oldvals;
+					$oldvals = $this->values;
+					$oldPath = $this->path;
+					if ($ins[0] == 'extd'){
+						$oldBlocks = $this->blocks;
+						$this->execPgm($ins[4]);
 					}
+					$this->values = $arg;
+					$this->path = $p->path;
+
+					$this->execPgm($p->pgm);
+
+					if ($ins[0] == 'extd'){
+						$this->blocks = $oldBlocks;
+					}
+					$this->path = $oldPath;
+					$this->values = $oldvals;
+
 					break;
 
 				case 'fore':
@@ -182,7 +188,13 @@ class Template {
 
 				case 'regb':
 					if (!array_key_exists($ins[1], $this->blocks)){
-						$this->blocks[$ins[1]] = $ins[2];
+						$this->blocks[$ins[1]] = [$ins[2], null];
+					} else {
+						$blk =& $this->blocks[$ins[1]];
+						while ($blk[1] !== null){
+							$blk =& $blk[1];
+						}
+						$blk[1] = [$ins[2], null];
 					}
 					break;
 
@@ -234,6 +246,7 @@ class Template {
 	 * ['regb', $name, $body]
 	 * ['regw', $name, $wbody]
 	 * ['widg', $name, $attrs, $body]
+	 * ['extd', $tpl, $isarr, [$arg1, $arg2, ...], $body]
 	 *
 	 * Value arrays:
 	 * ['r', $value]
@@ -304,9 +317,14 @@ class Template {
 
 			case 'b':
 				$v = false;
-				if (array_key_exists($op[1], $this->blocks)){
+				if (array_key_exists($op[1], $this->blocks) && $this->blocks[$op[1]] !== null){
 					$oldres = $this->res;
 					$this->res = '';
+
+					$pgm = $this->blocks[$op[1]][0];
+					$parent = $this->blocks[$op[1]][1];
+					$this->blocks['parent'] = $parent;
+
 					if (count($op[2]) > 0){
 						$nvals = [];
 						foreach ($op[2] as $arg){
@@ -319,13 +337,15 @@ class Template {
 
 						$oldvals = $this->values;
 						$this->values = $nvals;
-						$this->execPgm($this->blocks[$op[1]]);
+						$this->execPgm($pgm);
 						$this->values = $oldvals;
 					} else {
-						$this->execPgm($this->blocks[$op[1]]);
+						$this->execPgm($pgm);
 					}
 					$v = $this->res;
 					$this->res = $oldres;
+
+					$this->blocks['parent'] = null;
 				}
 
 				return $v;
