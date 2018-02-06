@@ -205,6 +205,10 @@ class TemplateCompiler {
 						}
 						break;
 
+					case 'extend':
+						$this->processStatementExtend();
+						break;
+
 					default:
 						$this->processExpression();
 						break;
@@ -263,6 +267,63 @@ class TemplateCompiler {
 		} else {
 			$this->lexer->error('Expected condition in "if"');
 		}
+	}
+
+	private function processStatementExtend(){
+		$pgm = ['extd'];
+
+		if (
+			!$this->lexer->nextToken()
+			|| !(
+				$this->lexer->toktype == TemplateLexer::TOK_ID
+				|| $this->lexer->toktype == TemplateLexer::TOK_STR
+			)
+		){
+			$this->lexer->error('Expected path to extending template');
+		}
+
+		$pgm[] = $this->lexer->token;
+
+		$args = [];
+		$this->lexer->nextToken();
+		while (
+			$this->lexer->toktype != TemplateLexer::TOK_NONE
+			&& $this->lexer->toktype != TemplateLexer::TOK_ESC
+		){
+			$args[] = $this->lexer->parseExpression();
+		}
+
+		$acnt = count($args);
+		if ($acnt > 0){
+			if ($acnt > 1 || $args[0][0] == 'r' || $args[0][0] == 'b'){
+				$pgm[] = true;
+				$pgm[] = $args;
+			} else {
+				$pgm[] = false;
+				$pgm[] = $args[0];
+			}
+		} else {
+			$pgm[] = false;
+			$pgm[] = null;
+		}
+
+		$oldpgm = $this->pgm;
+		$this->pgm = [];
+
+		$this->parse();
+
+		if (!($this->lexer->isToken(TemplateLexer::TOK_ID, 'end') || $this->lexer->isToken(TemplateLexer::TOK_NONE, ''))){
+			$this->lexer->error('Expected "end" for "extend"');
+		}
+		$this->lexer->nextToken();
+
+		$body = $this->pgm;
+		$this->pgm = $oldpgm;
+
+		$pgm[] = array_filter($body, function($el){
+			return in_array($el[0], ['regb']);
+		});
+		$this->pgm[] = $pgm;
 	}
 
 	public function parse(){

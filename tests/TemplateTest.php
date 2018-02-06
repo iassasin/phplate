@@ -309,4 +309,23 @@ class TemplateTest extends TestCase {
 		$data = Template::buildStr($tpl, []);
 		$this->assertEquals('11', $data);
 	}
+
+	public function testExtendBlocks(){
+		$tpl = '{? include extend';
+		$data = Template::buildStr($tpl, []);
+		$this->assertEquals('original 1 original 2', $data);
+
+		$tpl = '{? extend extend';
+		$data = Template::buildStr($tpl, []);
+		$this->assertEquals('original 1 original 2', $data);
+
+		$tpl = '{? extend extend; block b1; "new 1"; end; " "; block b2; "new 2"; end; end;'
+			.'" "; extend extend; block b1; "new 11"; end; end;';
+		$data = Template::buildStr($tpl, []);
+		$this->assertEquals('new 1 new 2 new 11 original 2', $data);
+
+		$tpl = '{? extend extender; block b1; #parent; ":new 1"; end;';
+		$data = Template::buildStr($tpl, []);
+		$this->assertEquals('original 1:more:new 1 original 2', $data);
+	}
 }
