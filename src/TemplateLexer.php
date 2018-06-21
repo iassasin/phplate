@@ -31,7 +31,7 @@ class TemplateLexer {
 	];
 	private static $INF_OPS = [
 		1 => ['=', '+=', '-=', '*=', '/='],
-		2 => ['??'],
+		2 => ['??', '?'],
 		3 => ['or'],
 		4 => ['xor'],
 		5 => ['and'],
@@ -128,6 +128,12 @@ class TemplateLexer {
 					$parser->nextToken();
 
 					return ['(p', $val, $args];
+				},
+				':' => function (TemplateLexer $parser, $then, $lvl){
+					$parser->nextToken();
+					$else = $parser->parseExpression();
+
+					return [$then, $else];
 				},
 			],
 		];

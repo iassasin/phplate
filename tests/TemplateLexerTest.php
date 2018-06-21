@@ -77,4 +77,9 @@ class TemplateLexerTest extends TestCase {
 		$this->expectException(PhplateCompilerException::class);
 		Template::buildStr('{{ #name(23 }}', []);
 	}
+
+	/** @expectedException \Iassasin\Phplate\Exception\PhplateCompilerException */
+	public function testFailTernary(){
+		Template::buildStr('{{ 1 ? 0 : }}', []);
+	}
 }
