@@ -341,5 +341,13 @@ class TemplateTest extends TestCase {
 		$tpl = '{{ false ? 1 : val }}';
 		$data = Template::buildStr($tpl, ['val' => 555]);
 		$this->assertEquals(555, $data);
+
+		$tpl = '{{ false ? 1 * 0 : val + 1 == 556 ? "yes" : "no"}}';
+		$data = Template::buildStr($tpl, ['val' => 555]);
+		$this->assertEquals('yes', $data);
+
+		$tpl = '{{ (false ? (1 ? 0 : 2) : (3 > 4 ? "3>4" : "3>4-2"))|raw }}';
+		$data = Template::buildStr($tpl, []);
+		$this->assertEquals('3>4-2', $data);
 	}
 }

@@ -129,12 +129,6 @@ class TemplateLexer {
 
 					return ['(p', $val, $args];
 				},
-				':' => function (TemplateLexer $parser, $then, $lvl){
-					$parser->nextToken();
-					$else = $parser->parseExpression();
-
-					return [$then, $else];
-				},
 			],
 		];
 	}
@@ -182,6 +176,19 @@ class TemplateLexer {
 
 			if (is_callable($oplvl[1])){
 				$a1 = $oplvl[1]($this, $a1, $oplvl[0]);
+			} elseif ($oplvl[1] === '?') {
+				$arg1 = $this->infix($oplvl[0] + 1);
+
+				if ($this->toktype != self::TOK_OP || $this->token != ':'){
+					$this->error('Expected ":" operator');
+				}
+
+				if (!$this->nextToken()){
+					$this->error('Expected argument after ":"');
+				}
+
+				$arg2 = $this->infix($oplvl[0] + 1);
+				$a1 = ['?:i', $a1, [$arg1, $arg2]];
 			} else {
 				$a2 = $this->infix($oplvl[0] + 1);
 				$a1 = [$oplvl[1] . 'i', $a1, $a2];

@@ -79,7 +79,22 @@ class TemplateLexerTest extends TestCase {
 	}
 
 	/** @expectedException \Iassasin\Phplate\Exception\PhplateCompilerException */
-	public function testFailTernary(){
+	public function testFailTernary1(){
 		Template::buildStr('{{ 1 ? 0 : }}', []);
+	}
+
+	/** @expectedException \Iassasin\Phplate\Exception\PhplateCompilerException */
+	public function testFailTernary2(){
+		Template::buildStr('{{ false ? (1 : 3) }}', []);
+	}
+
+	/** @expectedException \Iassasin\Phplate\Exception\PhplateCompilerException */
+	public function testFailTernary3(){
+		Template::buildStr('{{ (false ? 1) : 3 }}', []);
+	}
+
+	/** @expectedException \Iassasin\Phplate\Exception\PhplateCompilerException */
+	public function testFailTernary4(){
+		Template::buildStr('{{ false ? 1 }}', []);
 	}
 }
