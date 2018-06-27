@@ -184,11 +184,11 @@ class TemplateLexer {
 				}
 
 				if (!$this->nextToken()){
-					$this->error('Expected argument after ":"');
+					$this->error('Expected expression after ":"');
 				}
 
 				$arg2 = $this->infix($oplvl[0] + 1);
-				$a1 = ['?:i', $a1, [$arg1, $arg2]];
+				$a1 = ['?:i', $a1, $arg1, $arg2];
 			} else {
 				$a2 = $this->infix($oplvl[0] + 1);
 				$a1 = [$oplvl[1] . 'i', $a1, $a2];
