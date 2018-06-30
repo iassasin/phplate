@@ -28,27 +28,27 @@ class TemplateLexerTest extends TestCase {
 		Template::buildStr('{{ 1| }}', []);
 	}
 
-	public function testIncorrectFuncCall(){
+	public function testIncorrectPipeFuncCall(){
 		$this->expectException(PhplateCompilerException::class);
 		Template::buildStr('{{ 1|safe(1 }}', []);
 	}
 
-	public function testIncorrectFuncCall2(){
+	public function testIncorrectFuncCall(){
 		$this->expectException(PhplateCompilerException::class);
 		Template::buildStr('{{ safe(1 }}', []);
 	}
 
-	public function testIncorrectArgument(){
+	public function testIncorrectArrayIndex(){
 		$this->expectException(PhplateCompilerException::class);
 		Template::buildStr('{{ this[] }}', []);
 	}
 
-	public function testIncorrectArr(){
+	public function testIncorrectArrayOperator(){
 		$this->expectException(PhplateCompilerException::class);
 		Template::buildStr('{{ var[', []);
 	}
 
-	public function testIncorrectArr2(){
+	public function testIncorrectArrayOperatorWithIndex(){
 		$this->expectException(PhplateCompilerException::class);
 		Template::buildStr('{{ var[2', []);
 	}
@@ -58,43 +58,43 @@ class TemplateLexerTest extends TestCase {
 		Template::buildStr('{? (1 ?}', []);
 	}
 
-	public function testEndOfFile(){
+	public function testEndOfFileInfixOperator(){
 		$this->expectException(PhplateCompilerException::class);
 		Template::buildStr('{? 1 + ', []);
 	}
 
-	public function testEndOfFile2(){
+	public function testEndOfFileForGroupingBrackets(){
 		$this->expectException(PhplateCompilerException::class);
 		Template::buildStr('{{ (', []);
 	}
 
-	public function testFailBlock(){
+	public function testIncorrectBlock(){
 		$this->expectException(PhplateCompilerException::class);
 		Template::buildStr('{{ #', []);
 	}
 
-	public function testFailBlock2(){
+	public function testIncorrectBlockCall(){
 		$this->expectException(PhplateCompilerException::class);
 		Template::buildStr('{{ #name(23 }}', []);
 	}
 
 	/** @expectedException \Iassasin\Phplate\Exception\PhplateCompilerException */
-	public function testFailTernary1(){
+	public function testIncompleteTernaryOperator(){
 		Template::buildStr('{{ 1 ? 0 : }}', []);
 	}
 
 	/** @expectedException \Iassasin\Phplate\Exception\PhplateCompilerException */
-	public function testFailTernary2(){
+	public function testIncorrectTernaryOperatorAtRight(){
 		Template::buildStr('{{ false ? (1 : 3) }}', []);
 	}
 
 	/** @expectedException \Iassasin\Phplate\Exception\PhplateCompilerException */
-	public function testFailTernary3(){
+	public function testIncorrectTernaryOperatorAtLeft(){
 		Template::buildStr('{{ (false ? 1) : 3 }}', []);
 	}
 
 	/** @expectedException \Iassasin\Phplate\Exception\PhplateCompilerException */
-	public function testFailTernary4(){
+	public function testIncorrectTernaryOperator(){
 		Template::buildStr('{{ false ? 1 }}', []);
 	}
 }
