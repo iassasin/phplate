@@ -126,7 +126,7 @@ class TemplateEngine {
 			if (file_exists($tcpath)){
 				if (!file_exists($tpath) || filemtime($tcpath) >= filemtime($tpath)){
 					$pgm = json_decode(file_get_contents($tcpath), true);
-					if ($pgm !== false){
+					if (is_array($pgm)){
 						$p = new Template($tpath, $pgm, $this->globalVars);
 						$this->tplCache[$tpath] = $p;
 

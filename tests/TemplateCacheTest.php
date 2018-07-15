@@ -94,4 +94,25 @@ class TemplateCacheTest extends TestCase {
 		$this->assertEquals('message', Template::build('template_test', ['message' => 'message']));
 		$this->assertFalse(file_exists(self::$cacheFileNoCacheDir) || file_exists(self::$cacheFileInCacheDir));
 	}
+
+	public function testCacheEnabledInvalidCacheFile(){
+		Template::init(__DIR__ . '/resources/', (new TemplateOptions())
+			->setCacheEnabled(true)
+			->setCacheDir('')
+			->setTemplateFileExtension('html')
+			->setAutoSafeEnabled(true)
+		);
+
+		self::cleanCaches();
+
+		file_put_contents(self::$cacheFileNoCacheDir, '');
+
+		$this->assertEquals('msg', Template::build('template_test', ['message' => 'msg']));
+		$this->assertTrue(file_exists(self::$cacheFileNoCacheDir));
+		$this->assertFalse(file_exists(self::$cacheFileInCacheDir));
+
+		$this->assertEquals('message', Template::build('template_test', ['message' => 'message']));
+		$this->assertTrue(file_exists(self::$cacheFileNoCacheDir));
+		$this->assertFalse(file_exists(self::$cacheFileInCacheDir));
+	}
 }
