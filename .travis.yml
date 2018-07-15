@@ -7,7 +7,9 @@ php:
 notifications:
     email: false
 
-before_script: composer install
+before_script:
+    - sudo apt-get update && sudo apt-get install php-igbinary
+    - composer install
 
 script:
     - php vendor/bin/phpunit
