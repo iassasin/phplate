@@ -434,6 +434,9 @@ class Template {
 			case '??i':
 				return $this->readValue($op[1]) ?: $this->readValue($op[2]);
 
+			case '?:i':
+				return $this->readValue($op[1]) ? $this->readValue($op[2]) : $this->readValue($op[3]);
+
 			case '=i':
 			case '+=i':
 			case '-=i':

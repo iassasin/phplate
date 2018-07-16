@@ -18,6 +18,7 @@ use PHPUnit\Framework\TestCase;
  * @covers \Iassasin\Phplate\TemplateOptions
  */
 class TemplateCacheTest extends TestCase {
+	private static $cacheFileWin1251NoCacheDir = __DIR__ . '/resources/win1251.ctpl';
 	private static $cacheFileNoCacheDir = __DIR__ . '/resources/template_test.ctpl';
 	private static $cacheFileInCacheDir;
 
@@ -30,6 +31,7 @@ class TemplateCacheTest extends TestCase {
 	private static function cleanCaches(){
 		self::cleanFile(self::$cacheFileNoCacheDir);
 		self::cleanFile(self::$cacheFileInCacheDir);
+		self::cleanFile(self::$cacheFileWin1251NoCacheDir);
 	}
 
 	public static function setUpBeforeClass(){
@@ -93,5 +95,47 @@ class TemplateCacheTest extends TestCase {
 		$this->assertFalse(file_exists(self::$cacheFileNoCacheDir) || file_exists(self::$cacheFileInCacheDir));
 		$this->assertEquals('message', Template::build('template_test', ['message' => 'message']));
 		$this->assertFalse(file_exists(self::$cacheFileNoCacheDir) || file_exists(self::$cacheFileInCacheDir));
+	}
+
+	public function testCacheEnabledInvalidCacheFile(){
+		Template::init(__DIR__ . '/resources/', (new TemplateOptions())
+			->setCacheEnabled(true)
+			->setCacheDir('')
+			->setTemplateFileExtension('html')
+			->setAutoSafeEnabled(true)
+		);
+
+		self::cleanCaches();
+
+		file_put_contents(self::$cacheFileNoCacheDir, '');
+
+		$this->assertEquals('msg', Template::build('template_test', ['message' => 'msg']));
+		$this->assertTrue(file_exists(self::$cacheFileNoCacheDir));
+		$this->assertFalse(file_exists(self::$cacheFileInCacheDir));
+
+		$this->assertEquals('message', Template::build('template_test', ['message' => 'message']));
+		$this->assertTrue(file_exists(self::$cacheFileNoCacheDir));
+		$this->assertFalse(file_exists(self::$cacheFileInCacheDir));
+	}
+
+	public function testCacheEnabledWin1251Tpl(){
+		Template::init(__DIR__ . '/resources/', (new TemplateOptions())
+			->setCacheEnabled(true)
+			->setCacheDir('')
+			->setTemplateFileExtension('html')
+			->setAutoSafeEnabled(true)
+		);
+
+		self::cleanCaches();
+
+		file_put_contents(self::$cacheFileNoCacheDir, '');
+
+		$this->assertEquals(mb_convert_encoding('русские символы', 'CP1251'), Template::build('win1251', []));
+		$this->assertTrue(file_exists(self::$cacheFileWin1251NoCacheDir));
+		$this->assertTrue(filesize(self::$cacheFileWin1251NoCacheDir) > 0);
+
+		$this->assertEquals(mb_convert_encoding('русские символы', 'CP1251'), Template::build('win1251', []));
+		$this->assertTrue(file_exists(self::$cacheFileWin1251NoCacheDir));
+		$this->assertTrue(filesize(self::$cacheFileWin1251NoCacheDir) > 0);
 	}
 }

@@ -328,4 +328,26 @@ class TemplateTest extends TestCase {
 		$data = Template::buildStr($tpl, []);
 		$this->assertEquals('original 1:more:new 1 original 2', $data);
 	}
+
+	public function testTernaryOperator(){
+		$tpl = '{{ false ? 1 : 2 }}';
+		$data = Template::buildStr($tpl, []);
+		$this->assertEquals(2, $data);
+
+		$tpl = '{{ true ? 1 : 2 }}';
+		$data = Template::buildStr($tpl, []);
+		$this->assertEquals(1, $data);
+
+		$tpl = '{{ false ? 1 : val }}';
+		$data = Template::buildStr($tpl, ['val' => 555]);
+		$this->assertEquals(555, $data);
+
+		$tpl = '{{ false ? 1 * 0 : val + 1 == 556 ? "yes" : "no"}}';
+		$data = Template::buildStr($tpl, ['val' => 555]);
+		$this->assertEquals('yes', $data);
+
+		$tpl = '{{ (false ? (1 ? 0 : 2) : (3 > 4 ? "3>4" : "3>4-2"))|raw }}';
+		$data = Template::buildStr($tpl, []);
+		$this->assertEquals('3>4-2', $data);
+	}
 }

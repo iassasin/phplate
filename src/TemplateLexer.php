@@ -31,7 +31,7 @@ class TemplateLexer {
 	];
 	private static $INF_OPS = [
 		1 => ['=', '+=', '-=', '*=', '/='],
-		2 => ['??'],
+		2 => ['??', '?'],
 		3 => ['or'],
 		4 => ['xor'],
 		5 => ['and'],
@@ -176,6 +176,19 @@ class TemplateLexer {
 
 			if (is_callable($oplvl[1])){
 				$a1 = $oplvl[1]($this, $a1, $oplvl[0]);
+			} elseif ($oplvl[1] === '?') {
+				$arg1 = $this->infix($oplvl[0] + 1);
+
+				if ($this->toktype != self::TOK_OP || $this->token != ':'){
+					$this->error('Expected ":" operator');
+				}
+
+				if (!$this->nextToken()){
+					$this->error('Expected expression after ":"');
+				}
+
+				$arg2 = $this->infix($oplvl[0] + 1);
+				$a1 = ['?:i', $a1, $arg1, $arg2];
 			} else {
 				$a2 = $this->infix($oplvl[0] + 1);
 				$a1 = [$oplvl[1] . 'i', $a1, $a2];
