@@ -8,7 +8,6 @@ notifications:
     email: false
 
 before_script:
-    - sudo apt-get update && sudo apt-get install php-igbinary
     - composer install
 
 script:

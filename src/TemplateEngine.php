@@ -125,7 +125,7 @@ class TemplateEngine {
 		if ($this->options->getCacheEnabled()){
 			if (file_exists($tcpath)){
 				if (!file_exists($tpath) || filemtime($tcpath) >= filemtime($tpath)){
-					$pgm = @igbinary_unserialize(file_get_contents($tcpath));
+					$pgm = @unserialize(file_get_contents($tcpath));
 					if (is_array($pgm)){
 						$p = new Template($tpath, $pgm, $this->globalVars);
 						$this->tplCache[$tpath] = $p;
@@ -163,7 +163,7 @@ class TemplateEngine {
 
 			$pgm = $c->getProgram();
 			if ($this->options->getCacheEnabled()){
-				file_put_contents($cachePath, igbinary_serialize($pgm));
+				file_put_contents($cachePath, serialize($pgm));
 			}
 
 			$p = new Template($tplPath, $pgm, $this->globalVars);
