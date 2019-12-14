@@ -334,7 +334,7 @@ class TemplateCompiler {
 					$this->lexer->nextToken();
 					$this->append($str, $this->lastop, $this->lexer->isToken(TemplateLexer::TOK_ESC, '{?'));
 					$this->lastop = false;
-					continue;
+					continue 2;
 					break;
 
 				case TemplateLexer::TOK_ESC:
