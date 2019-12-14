@@ -283,6 +283,8 @@ class Template {
 					return false;
 				} else if (is_array($v)){
 					return array_key_exists($k, $v) ? $v[$k] : false;
+				} else if ($v instanceof \ArrayAccess) {
+					return $v->offsetExists($k) ? $v[$k] : false;
 				} else if (method_exists($v, $k)){
 					return function () use ($v, $k){
 						return call_user_func_array([$v, $k], func_get_args());
